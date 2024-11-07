@@ -1,0 +1,4 @@
+mt5linux
+pyyaml
+telethon
+asyncio
