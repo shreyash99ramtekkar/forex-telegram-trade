@@ -163,4 +163,4 @@ cython_debug/
 logs
 sensitive.py
 
-.session
+*.session
