@@ -30,8 +30,8 @@ class TelegramApp:
             logger.info(message_content)
             # Check if the message contains any of the keywords
             if all(keyword in message_content for keyword in KEYWORDS):
-                logger.info(f"Filtered message in TREND_TITEN_FX_VIP : {event.message.message}")
-                trade_info = self.extract_trade_info(message_content)
+                logger.info(f"Filtered message in TREND_TITEN_FX_VIP : {message_content}")
+                trade_info = self.extract_trade_info(event.message.message)
                 self.metatrader_obj.sendOrder(trade_info)
                 logger.info("The trade info : " + str(trade_info))
                 # You can also add further processing here (e.g., save, forward, etc.)

@@ -76,9 +76,9 @@ class MetatraderSocket:
  
         # if the symbol is unavailable in MarketWatch, add it
         if not symbol_info.visible:
-            logger.info(symbol, "is not visible, trying to switch on")
+            logger.info(symbol+ "is not visible, trying to switch on")
             if not self.mt5.symbol_select(symbol,True):
-                logger.warning("symbol_select({}}) failed, exit",symbol)
+                logger.warning("symbol_select({}}) failed, exit" + symbol)
 
         request = {
             "action": action_,
