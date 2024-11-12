@@ -46,24 +46,25 @@ class MetatraderSocket:
             return;
         if symbol == "XAUUSD":
             symbol="GOLD"
-        print(self.mt5.symbol_info(symbol).volume_min)
-        lot = self.mt5.symbol_info(symbol).volume_min;   
+        symbol_info = self.mt5.symbol_info(symbol)
+        print(symbol_info.volume_min)
+        lot = symbol_info.volume_min;   
         deviation = 40
         self.telegram_obj.sendMessage(str(message))
         if "buy limit" in type_.lower():
             action_ = self.mt5.TRADE_ACTION_PENDING;
             type_ = self.mt5.ORDER_TYPE_BUY_LIMIT
-        elif "buy now" in type_.lower():
+        elif "buy now" in type_.lower() or "buy" in type_.lower():
             action_ = self.mt5.TRADE_ACTION_DEAL;
             type_ = self.mt5.ORDER_TYPE_BUY
-            price = self.mt5.symbol_info_tick(symbol).ask
+            price = symbol_info.ask
         elif "sell limit" in type_.lower():
             action_ = self.mt5.TRADE_ACTION_PENDING;
             type_ = self.mt5.ORDER_TYPE_SELL_LIMIT
-        elif "sell now" in type_.lower():
+        elif "sell now" in type_.lower() or 'sell' in type_.lower():
             action_ = self.mt5.TRADE_ACTION_DEAL;
             type_ = self.mt5.ORDER_TYPE_SELL
-            price = self.mt5.symbol_info_tick(symbol).bid
+            price = symbol_info.bid
         else:
             logger.warning("Type not valid please check the code");
             self.telegram_obj.sendMessage("Type not valid.")
@@ -72,6 +73,12 @@ class MetatraderSocket:
         if action_ is None:
             logger.warning("Action is None cannot proceed")
             return;
+ 
+        # if the symbol is unavailable in MarketWatch, add it
+        if not symbol_info.visible:
+            logger.info(symbol, "is not visible, trying to switch on")
+            if not self.mt5.symbol_select(symbol,True):
+                logger.warning("symbol_select({}}) failed, exit",symbol)
 
         request = {
             "action": action_,
@@ -87,6 +94,7 @@ class MetatraderSocket:
             "type_time": self.mt5.ORDER_TIME_GTC
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
+        
         logger.info(request)
         # send a trading request
         if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():

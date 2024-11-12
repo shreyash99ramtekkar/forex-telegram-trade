@@ -13,10 +13,12 @@ def main():
     
     try:
         # with telegram_app.client:
-            # logger.info("Telegram APP client initialized");
-            # telegram_app.client.loop.run_until_complete(telegram_app.fetch_last_message())
+        #     logger.info("Telegram APP client initialized");
+        #     telegram_app.client.loop.run_until_complete(telegram_app.fetch_last_message())
         with telegram_app.client:
             telegram_app.client.loop.run_until_complete(telegram_app.connect_and_listen())
+        # with telegram_app.client:
+        #     telegram_app.client.loop.run_until_complete(telegram_app.get_channel_id())
     finally:
         logger.info("Closing the connection for the metatrader5");
         socket.close_connection()

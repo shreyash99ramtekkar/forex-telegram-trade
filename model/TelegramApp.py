@@ -3,7 +3,8 @@ import re
 from constants.TelegramConstants import TELEGRAM_APP_ID
 from constants.TelegramConstants import TELEGRAM_HASH_ID
 from constants.TelegramConstants import TELEGRAM_USER_NAME
-from constants.TelegramConstants import CHANNEL_USERNAME
+from constants.TelegramConstants import TREND_TITEN_GOLD_VIP
+from constants.TelegramConstants import TREND_TITEN_FX_VIP
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 
 fxstreetlogger = FxTelegramTradeLogger()
@@ -23,13 +24,13 @@ class TelegramApp:
         await self.client.start()
         logger.info("Connection successful");
         # Listen for new messages with specific keywords
-        @self.client.on(events.NewMessage(chats=CHANNEL_USERNAME))
+        @self.client.on(events.NewMessage(chats=TREND_TITEN_FX_VIP))
         async def new_message_listener(event):
             message_content = event.message.message.lower()  # Convert to lowercase for case-insensitive matching
             logger.info(message_content)
             # Check if the message contains any of the keywords
             if all(keyword in message_content for keyword in KEYWORDS):
-                logger.info(f"Filtered message in {CHANNEL_USERNAME}: {event.message.message}")
+                logger.info(f"Filtered message in TREND_TITEN_FX_VIP : {event.message.message}")
                 trade_info = self.extract_trade_info(message_content)
                 self.metatrader_obj.sendOrder(trade_info)
                 logger.info("The trade info : " + str(trade_info))
@@ -45,27 +46,36 @@ class TelegramApp:
         await self.client.start()
         logger.info("Connection successful");
         # Get the most recent message from the specified channel
-        messages = await self.client.get_messages(CHANNEL_USERNAME, limit=10)
+        messages = await self.client.get_messages(TREND_TITEN_FX_VIP, limit=10)
         logger.info("Getting the messages")
         for message in messages:
+            logger.info(f"Message received: {message.message}")
             if all(keyword in message.message.lower() for keyword in KEYWORDS):
                 trade_info = self.extract_trade_info(message.message)
                 logger.info("The trade info : " + str(trade_info))
-                logger.info(f"Last message in {CHANNEL_USERNAME}: {message.message}")
+                logger.info(f"Last message in TREND_TITEN_FX_VIP: {message.message}")
                 self.metatrader_obj.sendOrder(trade_info)
                 
             else:
-                logger.info(f"No messages found in {CHANNEL_USERNAME}")
+                logger.info(f"No messages found in TREND_TITEN_FX_VIP")
 
+    async def get_channel_id(self):
+        # Connect to the Telegram client
+        await self.client.start()
+
+        # Iterate through all dialogs to list their names and IDs
+        async for dialog in self.client.iter_dialogs():
+            # Print the name and ID of each chat
+            print(f"Name: {dialog.name}, ID: {dialog.id}")
 
     def extract_trade_info(self,message):
         # Define regular expressions to capture each part
         currency_pattern = r'([A-Z]{3,6})'
-        type_pattern = r'(BUY NOW|BUY LIMIT|SELL NOW|SELL LIMIT)'
-        price_pattern = r'(\d+\.\d+)'  # Matches any number with decimal places
-        sl_pattern = r'SL\s*:\s*(\d+\.\d+)'
-        tp1_pattern = r'TP \(1\)\s*:\s*(\d+\.\d+)'
-        tp2_pattern = r'TP \(2\)\s*:\s*(\d+\.\d+)'
+        type_pattern = r'(BUY NOW|BUY LIMIT|SELL NOW|SELL LIMIT|BUY|SELL)'
+        price_pattern = r'(\d+\.?\d*)'  # Matches any number with decimal places
+        sl_pattern = r'SL\s*:\s*(\d+\.?\d*)'
+        tp1_pattern = r'TP \(1\)\s*:\s*(\d+\.?\d*)'
+        tp2_pattern = r'TP \(2\)\s*:\s*(\d+\.?\d*)'
 
         # Extract using regular expressions
         currency = re.search(currency_pattern, message).group(1)
