@@ -33,6 +33,13 @@ class MetatraderSocket:
         # don't forget to shutdown
         print(df)
 
+    def check_n_get_order_type(symbol_info,type,price):
+        """Check the prices from the vip channel match the symbol current price .if not then its a limit order"""
+        if (type == "buy" or type == "buy now") and  price != symbol_info.ask:
+            return "buy limit"
+        elif (type == "sell" or type == "sell now") and  price != symbol_info.bid:
+            return "sell limit"
+        return type;
 
     def sendOrder(self,message):
         symbol = message['currency']
@@ -47,6 +54,7 @@ class MetatraderSocket:
         if symbol == "XAUUSD":
             symbol="GOLD"
         symbol_info = self.mt5.symbol_info(symbol)
+        type_ = self.check_n_get_order_type(symbol_info,type_,price)
         print(symbol_info.volume_min)
         lot = symbol_info.volume_min;   
         deviation = 40

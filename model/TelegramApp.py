@@ -77,12 +77,12 @@ class TelegramApp:
         tp2_pattern = r'TP \(2\)\s*:\s*(\d+\.?\d*)'
 
         # Extract using regular expressions
-        currency = re.search(currency_pattern, message).group(1)
-        trade_type = re.search(type_pattern, message).group(1)
-        entry_price = re.search(price_pattern, message).group(1)
-        sl = re.search(sl_pattern, message).group(1)
-        tp1 = re.search(tp1_pattern, message).group(1)
-        tp2 = re.search(tp2_pattern, message).group(1)
+        currency = re.search(currency_pattern, message).group(1).strip()
+        trade_type = re.search(type_pattern, message).group(1).strip()
+        entry_price = re.search(price_pattern, message).group(1).strip()
+        sl = re.search(sl_pattern, message).group(1).strip()
+        tp1 = re.search(tp1_pattern, message).group(1).strip()
+        tp2 = re.search(tp2_pattern, message).group(1).strip()
 
         # Organize into a dictionary for easy access
         trade_info = {
