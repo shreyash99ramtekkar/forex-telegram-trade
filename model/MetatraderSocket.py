@@ -33,7 +33,7 @@ class MetatraderSocket:
         # don't forget to shutdown
         logger.debug(df)
 
-    def check_n_get_order_type(symbol_info,type,price):
+    def check_n_get_order_type(self,symbol_info,type,price):
         """Check the prices from the vip channel match the symbol current price .if not then its a limit order"""
         if (type == "buy" or type == "buy now") and  price != symbol_info.ask:
             return "buy limit"
