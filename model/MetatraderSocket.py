@@ -3,18 +3,21 @@ from constants.MetatraderConstants import METATRADER_ACCOUNT_ID
 from constants.MetatraderConstants import METATRADER_BROKER_SERVER
 from constants.MetatraderConstants import METATRADER_PASSWORD
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
+import os
+from dotenv import load_dotenv, dotenv_values 
 from notifications.Telegram import Telegram;
+load_dotenv() 
+
 
 fxstreetlogger = FxTelegramTradeLogger()
 logger = fxstreetlogger.get_logger(__name__)
 
 class MetatraderSocket:
     def __init__(self):
-        # import the package
-
+        logger.debug(os.getenv("MT5_SERVER"))
         # connecto to the server
         self.mt5 = MetaTrader5(
-            host = 'localhost',
+            host = os.getenv("MT5_SERVER"),
             port = 8001
         ) 
         
