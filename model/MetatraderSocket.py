@@ -31,7 +31,7 @@ class MetatraderSocket:
         df = self.mt5.copy_rates_from_pos('EURUSD',self.mt5.TIMEFRAME_M30,0,1000)
         # ...
         # don't forget to shutdown
-        print(df)
+        logger.debug(df)
 
     def check_n_get_order_type(symbol_info,type,price):
         """Check the prices from the vip channel match the symbol current price .if not then its a limit order"""
@@ -55,7 +55,7 @@ class MetatraderSocket:
             symbol="GOLD"
         symbol_info = self.mt5.symbol_info(symbol)
         type_ = self.check_n_get_order_type(symbol_info,type_,price)
-        print(symbol_info.volume_min)
+        logger.debug(symbol_info.volume_min)
         lot = symbol_info.volume_min;   
         deviation = 40
         self.telegram_obj.sendMessage(str(message))
@@ -108,7 +108,7 @@ class MetatraderSocket:
         if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():
             return
         result = self.mt5.order_send(request)
-        print(result)
+        logger.debug(result)
         # check the execution result
         logger.info("1. order_send(): by {} {} lots at {} with deviation={} points".format(symbol,lot,price,deviation));
         logger.info(result)

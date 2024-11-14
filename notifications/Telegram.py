@@ -16,7 +16,7 @@ class Telegram:
     
     def sendMessage(self,message):
         url = self.base_url + "/sendMessage?chat_id=" + self.chat_id + "&text=" + message 
-        print(requests.get(url).json()) # this sends the message
+        logger.debug(requests.get(url).json()) # this sends the message
 
     def sendImageCaption(self,image_file,message):
         url = self.base_url+"/sendPhoto"
@@ -25,4 +25,4 @@ class Telegram:
                 "caption": message
             }
         resp = requests.get(url,params=parameters,files=image_file)
-        print(resp.text)
+        logger.debug(resp.text)

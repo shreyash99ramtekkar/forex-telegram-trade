@@ -65,7 +65,7 @@ class TelegramApp:
         # Iterate through all dialogs to list their names and IDs
         async for dialog in self.client.iter_dialogs():
             # Print the name and ID of each chat
-            print(f"Name: {dialog.name}, ID: {dialog.id}")
+            logger.debug(f"Name: {dialog.name}, ID: {dialog.id}")
 
     def extract_trade_info(self,message):
         # Define regular expressions to capture each part
