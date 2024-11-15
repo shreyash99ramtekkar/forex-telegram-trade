@@ -14,7 +14,7 @@ logger = fxstreetlogger.get_logger(__name__)
 
 class MetatraderSocket:
     def __init__(self):
-        logger.debug(os.getenv("MT5_SERVER"))
+        logger.info(os.getenv("MT5_SERVER"))
         # connecto to the server
         self.mt5 = MetaTrader5(
             host = os.getenv("MT5_SERVER"),
