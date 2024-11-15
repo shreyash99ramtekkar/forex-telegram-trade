@@ -7,7 +7,7 @@ import os
 from dotenv import load_dotenv, dotenv_values 
 from notifications.Telegram import Telegram;
 load_dotenv() 
-
+telegram_obj = Telegram()
 
 fxstreetlogger = FxTelegramTradeLogger()
 logger = fxstreetlogger.get_logger(__name__)
@@ -24,10 +24,10 @@ class MetatraderSocket:
         # use as you learned from: https://www.mql5.com/en/docs/integration/python_metatrader5/
         if not self.mt5.initialize():
             logger.error("initialize() failed, error code =",self.mt5.last_error())
-       
+            telegram_obj.sendMessage("Problem connecting to Metatrader5" + self.mt5.last_error())
         self.mt5.terminal_info()
 
-        self.telegram_obj = Telegram()
+        
 
 
     def get_rates(self):
@@ -42,6 +42,7 @@ class MetatraderSocket:
             return "buy limit"
         elif (type == "sell" or type == "sell now") and  price != symbol_info.bid:
             return "sell limit"
+        telegram_obj.sendMessage("The order type is" + type)
         return type;
 
     def sendOrder(self,message):
@@ -61,7 +62,7 @@ class MetatraderSocket:
         logger.debug(symbol_info.volume_min)
         lot = symbol_info.volume_min;   
         deviation = 40
-        self.telegram_obj.sendMessage(str(message))
+        
         if "buy limit" in type_.lower():
             action_ = self.mt5.TRADE_ACTION_PENDING;
             type_ = self.mt5.ORDER_TYPE_BUY_LIMIT
@@ -78,13 +79,13 @@ class MetatraderSocket:
             price = symbol_info.bid
         else:
             logger.warning("Type not valid please check the code");
-            self.telegram_obj.sendMessage("Type not valid.")
+            telegram_obj.sendMessage("Type not valid.")
             return
-        
+   
         if action_ is None:
             logger.warning("Action is None cannot proceed")
             return;
- 
+        telegram_obj.sendMessage(f"Currency: [{message['currency']}], type: [{type_}] SL: {sl}, TP: {tp} Action: {action_}" )
         # if the symbol is unavailable in MarketWatch, add it
         if not symbol_info.visible:
             logger.info(symbol+ "is not visible, trying to switch on")
@@ -106,17 +107,17 @@ class MetatraderSocket:
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
         
-        logger.info(request)
+        logger.info("The request is ["+request+"]")
         # send a trading request
         if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():
             return
         result = self.mt5.order_send(request)
-        logger.debug(result)
+        logger.info(f"The result from metatrader5 : {result}")
         # check the execution result
         logger.info("1. order_send(): by {} {} lots at {} with deviation={} points".format(symbol,lot,price,deviation));
-        logger.info(result)
         if result.retcode != self.mt5.TRADE_RETCODE_DONE:
             logger.error("2. order_send failed, retcode={}".format(result.retcode))
+            telegram_obj.sendMessage("Order failed...")
             # request the result as a dictionary and display it element by element
             result_dict=result._asdict()
             for field in result_dict.keys():
@@ -139,7 +140,7 @@ class MetatraderSocket:
                 return False;
             logger.warning("Already open position on the symbol")
             logger.info("Total orders on "+ symbol + ":" + str(len(orders)))
-            self.telegram_obj.sendMessage("Already open position on the "+ str(symbol) +". Please take the action on the open orders")
+            telegram_obj.sendMessage("Already open position on the "+ str(symbol) +". Please take the action on the open orders")
         # display all active orders
         logger.info("Open orders for the symbol " + symbol + " are " )
         for order in orders:
@@ -158,7 +159,7 @@ class MetatraderSocket:
                 logger.info(order)
             if len(orders)>=threshold:
                 logger.info("Equal or More than " + str(threshold) + " orders open")
-                self.telegram_obj.sendMessage("Already more than " + str(threshold) + " position open. So not executing the 3rd trade")
+                telegram_obj.sendMessage("Already more than " + str(threshold) + " position open. So not executing the 3rd trade")
                 return True;
             else:
                 return False

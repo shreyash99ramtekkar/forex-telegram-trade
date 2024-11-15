@@ -5,8 +5,11 @@ from constants.TelegramConstants import TELEGRAM_HASH_ID
 from constants.TelegramConstants import TELEGRAM_USER_NAME
 from constants.TelegramConstants import TELEGRAM_CHANNEL_IDS
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
+from notifications.Telegram import Telegram;
 
+telegram_obj = Telegram()
 fxstreetlogger = FxTelegramTradeLogger()
+
 logger = fxstreetlogger.get_logger(__name__)
 
 KEYWORDS = ["sl","tp (1)","tp (2)","move sl after tp1"]
@@ -26,7 +29,7 @@ class TelegramApp:
         @self.client.on(events.NewMessage(chats=TELEGRAM_CHANNEL_IDS))
         async def new_message_listener(event):
             message_content = event.message.message.lower()  # Convert to lowercase for case-insensitive matching
-            logger.info(message_content)
+            logger.info("Message content : [ "+ message_content + " ]")
             # Check if the message contains any of the keywords
             if all(keyword in message_content for keyword in KEYWORDS):
                 logger.info(f"Filtered message in {event.chat.title} : {message_content}")
@@ -34,6 +37,8 @@ class TelegramApp:
                 self.metatrader_obj.sendOrder(trade_info)
                 logger.info("The trade info : " + str(trade_info))
                 # You can also add further processing here (e.g., save, forward, etc.)
+            else:
+                telegram_obj.sendMessage("Message [" + message_content + "] didn't match the Keywords" + KEYWORDS)
 
         # Keep the client running to listen for messages
         logger.info("Listening for filtered messages...")
