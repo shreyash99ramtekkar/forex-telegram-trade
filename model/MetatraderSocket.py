@@ -107,7 +107,7 @@ class MetatraderSocket:
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
         
-        logger.info("The request is ["+request+"]")
+        logger.info("The request is ["+str(request)+"]")
         # send a trading request
         if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():
             return

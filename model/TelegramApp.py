@@ -38,7 +38,7 @@ class TelegramApp:
                 logger.info("The trade info : " + str(trade_info))
                 # You can also add further processing here (e.g., save, forward, etc.)
             else:
-                telegram_obj.sendMessage("Message [" + message_content + "] didn't match the Keywords" + KEYWORDS)
+                telegram_obj.sendMessage("Message [" + message_content + "] didn't match the Keywords" + str(KEYWORDS))
 
         # Keep the client running to listen for messages
         logger.info("Listening for filtered messages...")
