@@ -4,6 +4,7 @@ from constants.MetatraderConstants import METATRADER_BROKER_SERVER
 from constants.MetatraderConstants import METATRADER_PASSWORD
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 import os
+import math
 from dotenv import load_dotenv, dotenv_values 
 from notifications.Telegram import Telegram;
 load_dotenv() 
@@ -38,11 +39,14 @@ class MetatraderSocket:
 
     def check_n_get_order_type(self,symbol_info,type,price):
         """Check the prices from the vip channel match the symbol current price .if not then its a limit order"""
-        if (type == "buy" or type == "buy now") and  price != symbol_info.ask:
+        if (type == "buy" or type == "buy now") and  math.floor(price) != math.floor(symbol_info.ask):
+            logger.info(f"The price [{math.floor(symbol_info.ask)}] doesn't match the telegram price [{math.floor(price)}]: Limit Order BUY")
             return "buy limit"
-        elif (type == "sell" or type == "sell now") and  price != symbol_info.bid:
+        elif (type == "sell" or type == "sell now") and  math.floor(price) != math.floor(symbol_info.bid):
+            logger.info(f"The price [{math.floor(symbol_info.bid)}] doesn't match the telegram price [{math.floor(price)}]: Limit Order SELL")
             return "sell limit"
-        telegram_obj.sendMessage("The order type is" + type)
+        logger.info(f"The price match the telegram price [{price}]: {type}")
+        telegram_obj.sendMessage(f"The order type is: [{type}]")
         return type;
 
     def sendOrder(self,message):
