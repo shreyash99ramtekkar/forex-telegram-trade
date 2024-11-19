@@ -152,7 +152,7 @@ class MetatraderSocket:
         return True;
 
     def checkOldPosition(self):
-        threshold = 1
+        threshold = 2
         orders=self.mt5.positions_get()
         if orders is None:
             logger.info("No open orders error code={}".format(self.mt5.last_error()))
