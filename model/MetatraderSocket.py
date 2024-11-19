@@ -134,21 +134,21 @@ class MetatraderSocket:
 
 
     def checkOldPositionSymbol(self,symbol):
+        threshold = 2
         orders=self.mt5.positions_get(symbol=symbol)
         if orders is None:
             logger.info("No orders on ++"+ symbol +" error code={}".format(self.mt5.last_error()))
             return False;
         else:
-            if len(orders)==0:
-                logger.info("No orders on : "+ symbol)
+            logger.info("Open orders for the symbol " + symbol + " are " )
+            for order in orders:
+                logger.info(order)
+            if len(orders)<=threshold:
+                logger.info(f"Open orders on currency [{symbol}] are [{len(orders)}] which is less than Threshold [{threshold}]")
                 return False;
             logger.warning("Already open position on the symbol")
-            logger.info("Total orders on "+ symbol + ":" + str(len(orders)))
-            telegram_obj.sendMessage("Already open position on the "+ str(symbol) +". Please take the action on the open orders")
-        # display all active orders
-        logger.info("Open orders for the symbol " + symbol + " are " )
-        for order in orders:
-            logger.info(order)
+            logger.info(f"Total orders on [{symbol}] : {str(len(orders))} which is more than Threshold [{threshold}]")
+            telegram_obj.sendMessage(f"Total orders on [{symbol}] : {str(len(orders))} which is more than Threshold [{threshold}]. Please take the action on the open orders")
         return True;
 
     def checkOldPosition(self):
@@ -162,8 +162,8 @@ class MetatraderSocket:
             for order in orders:
                 logger.info(order)
             if len(orders)>=threshold:
-                logger.info("Equal or More than " + str(threshold) + " orders open")
-                telegram_obj.sendMessage("Already more than " + str(threshold) + " position open. So not executing the 3rd trade")
+                logger.info(f"Open orders are [{len(orders)}] which is more than Threshold [{threshold}]")
+                telegram_obj.sendMessage(f"Total orders : {str(len(orders))} which is more than Threshold [{threshold}]. Please take the action on the open orders")
                 return True;
             else:
                 return False
