@@ -1,11 +1,14 @@
 from telethon import TelegramClient, events
 import re
+from datetime import datetime as dt
 from constants.TelegramConstants import TELEGRAM_APP_ID
 from constants.TelegramConstants import TELEGRAM_HASH_ID
 from constants.TelegramConstants import TELEGRAM_USER_NAME
 from constants.TelegramConstants import TELEGRAM_CHANNEL_IDS
+from constants.Constants import TIME_FORMAT;
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 from notifications.Telegram import Telegram;
+
 
 telegram_obj = Telegram()
 fxstreetlogger = FxTelegramTradeLogger()
@@ -96,7 +99,8 @@ class TelegramApp:
             "entry_price": entry_price,
             "sl": sl,
             "tp1": tp1,
-            "tp2": tp2
+            "tp2": tp2,
+            "time": dt.now().strftime(TIME_FORMAT)
         }
         
         return trade_info

@@ -15,11 +15,11 @@ logger = fxstreetlogger.get_logger(__name__)
 
 class MetatraderSocket:
     def __init__(self):
-        logger.info(os.getenv("MT5_SERVER"))
+        logger.info(os.getenv("MT5_SERVER") + " port: "+ str(os.getenv("MT5_PORT")))
         # connecto to the server
         self.mt5 = MetaTrader5(
             host = os.getenv("MT5_SERVER"),
-            port = 8001
+            port = os.getenv("MT5_PORT")
         ) 
         
         # use as you learned from: https://www.mql5.com/en/docs/integration/python_metatrader5/
@@ -106,7 +106,7 @@ class MetatraderSocket:
             "tp": tp,
             "deviation": deviation,
             "magic": 77777,
-            "comment": "python script open",
+            "comment": message,
             "type_time": self.mt5.ORDER_TIME_GTC
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
