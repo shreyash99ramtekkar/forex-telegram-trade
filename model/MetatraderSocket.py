@@ -106,7 +106,7 @@ class MetatraderSocket:
             "tp": tp,
             "deviation": deviation,
             "magic": 77777,
-            "comment": message,
+            "comment": str(message),
             "type_time": self.mt5.ORDER_TIME_GTC
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
