@@ -5,9 +5,9 @@ from constants.MetatraderConstants import METATRADER_PASSWORD
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 import os
 import math
-from dotenv import load_dotenv, dotenv_values 
+
 from notifications.Telegram import Telegram;
-load_dotenv() 
+
 telegram_obj = Telegram()
 
 fxstreetlogger = FxTelegramTradeLogger()
@@ -54,6 +54,7 @@ class MetatraderSocket:
         type_ = message['trade_type']
         sl = float(message['sl'])
         tp = float(message['tp1'])
+        tp2 = float(message['tp2'])
         action_ = None;
         price = float(message['entry_price'])
         if len(symbol) == 0 or len(type_) == 0 or sl is None or tp is None or price is None:
@@ -106,7 +107,7 @@ class MetatraderSocket:
             "tp": tp,
             "deviation": deviation,
             "magic": 77777,
-            "comment": str(message),
+            "comment": str(tp2),
             "type_time": self.mt5.ORDER_TIME_GTC
             # "type_filling": self.mt5.ORDER_FILLING_IOC,
         }
@@ -116,21 +117,22 @@ class MetatraderSocket:
         if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():
             return
         result = self.mt5.order_send(request)
-        logger.info(f"The result from metatrader5 : {result}")
+        logger.info(f"The result from metatrader5 : {str(result)}")
         # check the execution result
         logger.info("1. order_send(): by {} {} lots at {} with deviation={} points".format(symbol,lot,price,deviation));
         if result.retcode != self.mt5.TRADE_RETCODE_DONE:
-            logger.error("2. order_send failed, retcode={}".format(result.retcode))
-            telegram_obj.sendMessage("Order failed...")
+            logger.error("2. order_send failed, retcode={}, Reason={}".format(result.retcode,result.comment))
+            telegram_obj.sendMessage("Order failed..." + str(result.comment))
             # request the result as a dictionary and display it element by element
             result_dict=result._asdict()
             for field in result_dict.keys():
-                logger.error("   {}={}".format(field,result_dict[field]))
+                # logger.error("   {}={}".format(field,result_dict[field]))
                 # if this is a trading request structure, display it element by element as well
                 if field=="request":
                     traderequest_dict=result_dict[field]._asdict()
-                    for tradereq_filed in traderequest_dict:
-                        logger.error("traderequest: {}={}".format(tradereq_filed,traderequest_dict[tradereq_filed]))
+                    logger.error(f"traderequest: {str(traderequest_dict)}")
+                    # for tradereq_filed in traderequest_dict:
+                    #     logger.error("traderequest: {}={}".format(tradereq_filed,traderequest_dict[tradereq_filed]))
 
 
     def checkOldPositionSymbol(self,symbol):

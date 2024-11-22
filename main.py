@@ -4,6 +4,7 @@ from model.TelegramApp import TelegramApp;
 from model.MetatraderSocket import MetatraderSocket
 from notifications.Telegram import Telegram;
 
+
 fxstreetlogger = FxTelegramTradeLogger()
 logger = fxstreetlogger.get_logger(__name__)
 socket = MetatraderSocket()

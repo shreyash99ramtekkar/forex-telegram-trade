@@ -1,21 +1,16 @@
-from constants.sensitive import TOKEN
-from constants.sensitive import CHAT_ID;
-from constants.sensitive import APP_ID;
-from constants.sensitive import HASH_ID;
-from constants.sensitive import PHONE;
-from constants.sensitive import USER_NAME_TELE;
-from constants.sensitive import GOLD_VIP
-from constants.sensitive import FX_VIP;
+import os
+from dotenv import load_dotenv
 
-TELEGRAM_TOKEN = TOKEN
-TELEGRAM_CHAT_ID = CHAT_ID
+# load .env file to environment
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("CHAT_ID")
+TELEGRAM_SESSION = os.getenv("PROFILE")
 
 
-TELEGRAM_APP_ID = APP_ID
-TELEGRAM_HASH_ID =HASH_ID
-TELEGRAM_PHONE = PHONE
-TELEGRAM_USER_NAME = USER_NAME_TELE
+TELEGRAM_APP_ID = os.getenv("APP_ID")
+TELEGRAM_HASH_ID = os.getenv("HASH_ID")
+TELEGRAM_PHONE = os.getenv("PHONE")
 
-
-
-TELEGRAM_CHANNEL_IDS = [GOLD_VIP, FX_VIP]
+TELEGRAM_CHANNEL_IDS = [ int(item) for item in os.getenv("TELEGRAM_IDS").split(',') ]

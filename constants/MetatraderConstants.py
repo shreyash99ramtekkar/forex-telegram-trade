@@ -1,15 +1,16 @@
-# import mt5linux.MetaTrader as mt5;
-from constants.sensitive import USERNAME
-from constants.sensitive import PASS;
-from mt5linux import MetaTrader5
+import os
+from dotenv import load_dotenv
+
+# load .env file to environment
+load_dotenv()
 
 #metatrader account id
-METATRADER_ACCOUNT_ID = USERNAME
+METATRADER_ACCOUNT_ID = os.getenv("USERNAME")
 
-METATRADER_PASSWORD = PASS
+METATRADER_PASSWORD = os.getenv("PASS") 
 
 #metatrader broker server
-METATRADER_BROKER_SERVER = "Ava-Demo 1-MT5"
+METATRADER_BROKER_SERVER =  os.getenv("METATRADER_BROKER_SERVER")
 
 
 #Time frame for the candlestick to form one candle

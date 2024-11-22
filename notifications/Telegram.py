@@ -2,6 +2,7 @@
 import requests
 from constants.TelegramConstants import TELEGRAM_TOKEN;
 from constants.TelegramConstants import TELEGRAM_CHAT_ID;
+from constants.TelegramConstants import TELEGRAM_SESSION
 
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 
@@ -13,9 +14,9 @@ class Telegram:
         self.token = TELEGRAM_TOKEN;
         self.chat_id= TELEGRAM_CHAT_ID
         self.base_url = "https://api.telegram.org/bot" + self.token 
-    
+        
     def sendMessage(self,message):
-        url = self.base_url + "/sendMessage?chat_id=" + self.chat_id + "&text=" + message 
+        url = self.base_url + "/sendMessage?chat_id=" + self.chat_id + "&text=[ "+TELEGRAM_SESSION + " ] " + message 
         logger.debug(requests.get(url).json()) # this sends the message
 
     def sendImageCaption(self,image_file,message):

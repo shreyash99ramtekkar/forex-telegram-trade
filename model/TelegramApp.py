@@ -2,13 +2,13 @@ from telethon import TelegramClient, events
 import re
 from datetime import datetime as dt
 from constants.TelegramConstants import TELEGRAM_APP_ID
+from constants.TelegramConstants import TELEGRAM_SESSION;
 from constants.TelegramConstants import TELEGRAM_HASH_ID
-from constants.TelegramConstants import TELEGRAM_USER_NAME
 from constants.TelegramConstants import TELEGRAM_CHANNEL_IDS
 from constants.Constants import TIME_FORMAT;
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 from notifications.Telegram import Telegram;
-
+import os;
 
 telegram_obj = Telegram()
 fxstreetlogger = FxTelegramTradeLogger()
@@ -20,7 +20,7 @@ KEYWORDS = ["sl","tp (1)","tp (2)","move sl after tp1"]
 class TelegramApp:
     def __init__(self,metatrader_obj):
         # Create the client and connect
-        self.client = TelegramClient(TELEGRAM_USER_NAME, TELEGRAM_APP_ID, TELEGRAM_HASH_ID)
+        self.client = TelegramClient(TELEGRAM_SESSION, TELEGRAM_APP_ID, TELEGRAM_HASH_ID)
         self.metatrader_obj = metatrader_obj
 
     async def connect_and_listen(self):
@@ -35,7 +35,10 @@ class TelegramApp:
             logger.info("Message content : [ "+ message_content + " ]")
             # Check if the message contains any of the keywords
             if all(keyword in message_content for keyword in KEYWORDS):
-                logger.info(f"Filtered message in {event.chat.title} : {message_content}")
+                chat_title = "Private Chat"
+                if hasattr(event.chat, 'title'):
+                    chat_title = event.chat.title
+                logger.info(f"Filtered message in {chat_title} : {message_content}")
                 trade_info = self.extract_trade_info(event.message.message)
                 self.metatrader_obj.sendOrder(trade_info)
                 logger.info("The trade info : " + str(trade_info))
@@ -53,7 +56,7 @@ class TelegramApp:
         await self.client.start()
         logger.info("Connection successful");
         # Get the most recent message from the specified channel
-        messages = await self.client.get_messages(TELEGRAM_CHANNEL_IDS[0], limit=10)
+        messages = await self.client.get_messages(TELEGRAM_CHANNEL_IDS, limit=10)
         logger.info("Getting the messages")
         for message in messages:
             logger.info(f"Message received: {message.message}")
@@ -73,7 +76,7 @@ class TelegramApp:
         # Iterate through all dialogs to list their names and IDs
         async for dialog in self.client.iter_dialogs():
             # Print the name and ID of each chat
-            logger.debug(f"Name: {dialog.name}, ID: {dialog.id}")
+            logger.info(f"Name: {dialog.name}, ID: {dialog.id}")
 
     def extract_trade_info(self,message):
         # Define regular expressions to capture each part
