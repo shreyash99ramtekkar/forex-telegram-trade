@@ -5,6 +5,7 @@ from constants.MetatraderConstants import METATRADER_PASSWORD
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 import os
 import math
+from time import sleep
 
 from notifications.Telegram import Telegram;
 
@@ -65,6 +66,7 @@ class MetatraderSocket:
         symbol_info = self.mt5.symbol_info(symbol)
         type_ = self.check_n_get_order_type(symbol_info,type_,price)
         logger.debug(symbol_info.volume_min)
+        # lot = 0.02;   
         lot = symbol_info.volume_min;   
         deviation = 40
         
@@ -114,7 +116,7 @@ class MetatraderSocket:
         
         logger.info("The request is ["+str(request)+"]")
         # send a trading request
-        if self.checkOldPositionSymbol(symbol) and self.checkOldPosition():
+        if (self.checkOldPosition()) or (self.checkOldPositionSymbol(symbol)) :
             return
         result = self.mt5.order_send(request)
         logger.info(f"The result from metatrader5 : {str(result)}")
@@ -134,18 +136,17 @@ class MetatraderSocket:
                     # for tradereq_filed in traderequest_dict:
                     #     logger.error("traderequest: {}={}".format(tradereq_filed,traderequest_dict[tradereq_filed]))
 
-
     def checkOldPositionSymbol(self,symbol):
         threshold = 2
         orders=self.mt5.positions_get(symbol=symbol)
         if orders is None:
-            logger.info("No orders on ++"+ symbol +" error code={}".format(self.mt5.last_error()))
+            logger.info("No orders on ["+ symbol +"] error code={}".format(self.mt5.last_error()))
             return False;
         else:
             logger.info("Open orders for the symbol " + symbol + " are " )
             for order in orders:
                 logger.info(order)
-            if len(orders)<=threshold:
+            if len(orders)<threshold:
                 logger.info(f"Open orders on currency [{symbol}] are [{len(orders)}] which is less than Threshold [{threshold}]")
                 return False;
             logger.warning("Already open position on the symbol")
@@ -154,7 +155,7 @@ class MetatraderSocket:
         return True;
 
     def checkOldPosition(self):
-        threshold = 2
+        threshold = 3
         orders=self.mt5.positions_get()
         if orders is None:
             logger.info("No open orders error code={}".format(self.mt5.last_error()))
@@ -169,6 +170,99 @@ class MetatraderSocket:
                 return True;
             else:
                 return False
+
+    def monitor_close_half_update_tp(self):
+        """Monitor the open trades, Close half of the open positions and update the tp to new tp"""
+        # Monitor trades and perform updates
+        while True:
+            positions = self.mt5.positions_get()
+            if positions is None:
+                logger.info("No open positions or error:", mt5.last_error())
+                continue
+
+            for position in positions:
+                # Extract trade details
+                ticket = position.ticket
+                symbol = position.symbol
+                entry_price = position.price_open
+                volume = position.volume
+                comment = position.comment
+                tp1 = position.tp
+                type_ = position.type
+                if self.is_float(comment):
+                    tp2 = float(comment)
+                else:
+                    continue;
+
+                # Current market price
+                current_price = self.mt5.symbol_info_tick(symbol).bid if position.type == self.mt5.ORDER_TYPE_SELL else self.mt5.symbol_info_tick(symbol).ask
+                logger.info(f"The open position [{ticket}] of symbol [{symbol}]  of  type {type_} is having difference of {abs(current_price - tp1)} pips. Current price: [{current_price}] tp1: [{tp1}]")
+                # Check if the price is approaching TP1 (within 2-3 pips)
+                if abs(current_price - tp1) <= 0.50:  # Assuming 5-digit broker, adjust as needed
+                    # Move SL to entry price and TP to TP2
+                    self.modify_trade(ticket,symbol, new_sl=entry_price, new_tp=tp2)
+                    # Close half the position
+                    self.close_half_position(ticket, symbol, type_, volume)
+            logger.debug("Sleeping for 5 seconds")
+            sleep(2)  # Avoid overloading the terminal
+
+    def is_float(self,string):
+        try:
+        # Return true if float
+            float(string)
+            return True
+        except ValueError:
+        # Return False if Error
+            return False
+
+    def modify_trade(self,ticket,symbol, new_sl, new_tp):
+        request = {
+            "action": self.mt5.TRADE_ACTION_SLTP,
+            "position": ticket,
+            "sl": new_sl,
+            "tp": new_tp,
+        }
+        logger.info(f"The modify request is {str(request)}")
+        result = self.mt5.order_send(request)
+        if result.retcode != self.mt5.TRADE_RETCODE_DONE:
+            logger.info(f"Failed to modify trade {ticket}: {result.comment}")
+        else:
+            logger.info(f"Trade {ticket} modified: SL={new_sl}, TP={new_tp}")
+            telegram_obj.sendMessage(f"Trade updated for [{symbol}]. Tread.")
+
+    # Close half of the trade volume
+    def close_half_position(self,ticket, symbol, position_type, volume):
+        # MetaTrader 5 minimum lot size (typically 0.01, but can vary by broker)
+        MIN_VOLUME = 0.01
+
+        # If the current volume is the minimum, close the entire position
+        if volume <= MIN_VOLUME:
+            logger.info(f"Volume {volume} is too small to close half. Closing the entire position.")
+            half_volume = volume  # Close the full position
+        else:
+            # Calculate half volume and ensure it's at least MIN_VOLUME
+            half_volume = max(volume / 2, MIN_VOLUME)
+
+         # Determine the counter-order type
+        counter_order_type = self.mt5.ORDER_TYPE_BUY if position_type == self.mt5.ORDER_TYPE_SELL else self.mt5.ORDER_TYPE_SELL
+
+        # Calculate the price based on the counter-order type
+        price = self.mt5.symbol_info_tick(symbol).ask if counter_order_type == self.mt5.ORDER_TYPE_BUY else self.mt5.symbol_info_tick(symbol).bid
+
+        request = {
+            "action": self.mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": half_volume,
+            "type": counter_order_type,
+            "position": ticket,
+            "price": price,
+            "deviation": 10,
+        }
+        result = self.mt5.order_send(request)
+        if result.retcode != self.mt5.TRADE_RETCODE_DONE:
+            logger.info(f"Failed to close half of the trade {ticket}: {result.comment}")
+        else:
+            logger.info(f"Half of the currency [{symbol}] trade {ticket} closed: {volume}")
 
     def close_connection(self):
         self.mt5.shutdown()
