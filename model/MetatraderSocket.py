@@ -173,6 +173,7 @@ class MetatraderSocket:
 
     def monitor_close_half_update_tp(self):
         """Monitor the open trades, Close half of the open positions and update the tp to new tp"""
+        tolarance=0.02
         # Monitor trades and perform updates
         while True:
             positions = self.mt5.positions_get()
@@ -198,13 +199,19 @@ class MetatraderSocket:
                 current_price = self.mt5.symbol_info_tick(symbol).bid if position.type == self.mt5.ORDER_TYPE_SELL else self.mt5.symbol_info_tick(symbol).ask
                 logger.info(f"The open position [{ticket}] of symbol [{symbol}]  of  type {type_} is having difference of {abs(current_price - tp1)} pips. Current price: [{current_price}] tp1: [{tp1}]")
                 # Check if the price is approaching TP1 (within 2-3 pips)
-                if abs(current_price - tp1) <= 0.50:  # Assuming 5-digit broker, adjust as needed
+
+                if abs(current_price - tp1) <= self.get_tolarance(symbol):  # Assuming 5-digit broker, adjust as needed
                     # Move SL to entry price and TP to TP2
                     self.modify_trade(ticket,symbol, new_sl=entry_price, new_tp=tp2)
                     # Close half the position
                     self.close_half_position(ticket, symbol, type_, volume)
             logger.debug("Sleeping for 5 seconds")
             sleep(2)  # Avoid overloading the terminal
+
+    def get_tolarance(self,symbol):
+        if symbol == "GOLD" or symbol =="XAUUSD":
+            return 0.50
+        return 0.005
 
     def is_float(self,string):
         try:
