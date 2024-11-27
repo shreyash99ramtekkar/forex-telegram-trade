@@ -211,7 +211,9 @@ class MetatraderSocket:
     def get_tolarance(self,symbol):
         if symbol == "GOLD" or symbol =="XAUUSD":
             return 0.50
-        return 0.005
+        elif "JPY" in symbol:
+            return 0.003
+        return 0.00005
 
     def is_float(self,string):
         try:
