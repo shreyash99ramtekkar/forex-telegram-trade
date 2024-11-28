@@ -66,8 +66,8 @@ class MetatraderSocket:
         symbol_info = self.mt5.symbol_info(symbol)
         type_ = self.check_n_get_order_type(symbol_info,type_,price)
         logger.debug(symbol_info.volume_min)
-        # lot = 0.02;   
-        lot = symbol_info.volume_min;   
+        lot = 0.02;   
+        #lot = symbol_info.volume_min;   
         deviation = 40
         
         if "buy limit" in type_.lower():
@@ -173,7 +173,7 @@ class MetatraderSocket:
 
     def monitor_close_half_update_tp(self):
         """Monitor the open trades, Close half of the open positions and update the tp to new tp"""
-        tolarance=0.02
+        
         # Monitor trades and perform updates
         while True:
             positions = self.mt5.positions_get()
