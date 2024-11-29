@@ -15,7 +15,10 @@ fxstreetlogger = FxTelegramTradeLogger()
 
 logger = fxstreetlogger.get_logger(__name__)
 
-KEYWORDS = ["sl","tp (1)","tp (2)","move sl after tp1"]
+KEYWORDS = { 
+    'trade' : ["sl","tp (1)","tp (2)","move sl after tp1"],
+    'close' : ["partial", "close"]
+    }
 
 class TelegramApp:
     def __init__(self,metatrader_obj):
@@ -34,21 +37,38 @@ class TelegramApp:
             message_content = event.message.message.lower()  # Convert to lowercase for case-insensitive matching
             logger.info("Message content : [ "+ message_content + " ]")
             # Check if the message contains any of the keywords
-            if all(keyword in message_content for keyword in KEYWORDS):
-                chat_title = "Private Chat"
-                if hasattr(event.chat, 'title'):
-                    chat_title = event.chat.title
-                logger.info(f"Filtered message in {chat_title} : {message_content}")
-                trade_info = self.extract_trade_info(event.message.message)
+            chat_title = "Private Chat"
+            if hasattr(event.chat, 'title'):
+                chat_title = event.chat.title
+            if all(keyword in message_content for keyword in KEYWORDS['trade']):
+                logger.info(f"Trade : Filtered message in {chat_title} : {message_content}")
+                trade_info = self.extract_trade_info(event.message.message,event.date)
                 self.metatrader_obj.sendOrder(trade_info)
                 logger.info("The trade info : " + str(trade_info))
                 # You can also add further processing here (e.g., save, forward, etc.)
+            elif any(keyword in message_content for keyword in KEYWORDS['close']):
+                logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
+                await self.close_message_update(event)
             else:
                 telegram_obj.sendMessage("Message [" + message_content + "] didn't match the Keywords" + str(KEYWORDS))
 
         # Keep the client running to listen for messages
         logger.info("Listening for filtered messages...")
         await self.client.run_until_disconnected()
+
+    async def close_message_update(self,event):
+        if event.is_reply:
+            # Get the original message
+            logger.info("Reply message found. Getting original message")
+            original_message = await event.get_reply_message()
+            if original_message:
+                logger.info("Extracting trade info from the message")
+                trade_info = self.extract_trade_info(original_message.text,original_message.date)
+                self.metatrader_obj.close_trade(trade_info)
+        else:
+            logger.info('Normal message')
+        # Information about the current message
+        
 
     async def fetch_last_message(self):
         logger.info("Connecting to the telegram app");
@@ -78,7 +98,7 @@ class TelegramApp:
             # Print the name and ID of each chat
             logger.info(f"Name: {dialog.name}, ID: {dialog.id}")
 
-    def extract_trade_info(self,message):
+    def extract_trade_info(self,message,event_time):
         # Define regular expressions to capture each part
         currency_pattern = r'([A-Z]{3,6})'
         type_pattern = r'(BUY NOW|BUY LIMIT|SELL NOW|SELL LIMIT|BUY|SELL)'
@@ -103,7 +123,7 @@ class TelegramApp:
             "sl": sl,
             "tp1": tp1,
             "tp2": tp2,
-            "time": dt.now().strftime(TIME_FORMAT)
+            "time": event_time.strftime(TIME_FORMAT)
         }
         
         return trade_info

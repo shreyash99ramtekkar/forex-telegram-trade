@@ -2,6 +2,8 @@ from mt5linux import MetaTrader5
 from constants.MetatraderConstants import METATRADER_ACCOUNT_ID
 from constants.MetatraderConstants import METATRADER_BROKER_SERVER
 from constants.MetatraderConstants import METATRADER_PASSWORD
+
+from repository.TradeRepository import TradeRepository;
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 import os
 import math
@@ -16,6 +18,7 @@ logger = fxstreetlogger.get_logger(__name__)
 
 class MetatraderSocket:
     def __init__(self):
+        self.tradedao = TradeRepository();
         logger.info(os.getenv("MT5_SERVER") + " port: "+ str(os.getenv("MT5_PORT")))
         # connecto to the server
         self.mt5 = MetaTrader5(
@@ -68,7 +71,7 @@ class MetatraderSocket:
         logger.debug(symbol_info.volume_min)
         lot = 0.02;   
         #lot = symbol_info.volume_min;   
-        deviation = 40
+        deviation = 10
         
         if "buy limit" in type_.lower():
             action_ = self.mt5.TRADE_ACTION_PENDING;
@@ -122,7 +125,10 @@ class MetatraderSocket:
         logger.info(f"The result from metatrader5 : {str(result)}")
         # check the execution result
         logger.info("1. order_send(): by {} {} lots at {} with deviation={} points".format(symbol,lot,price,deviation));
-        if result.retcode != self.mt5.TRADE_RETCODE_DONE:
+        if result.retcode == self.mt5.TRADE_RETCODE_DONE:
+            logger.info("Processing the trade transaction into db")
+            self.tradedao.process_trade_info(message,request,result)
+        elif result.retcode != self.mt5.TRADE_RETCODE_DONE:
             logger.error("2. order_send failed, retcode={}, Reason={}".format(result.retcode,result.comment))
             telegram_obj.sendMessage("Order failed..." + str(result.comment))
             # request the result as a dictionary and display it element by element
@@ -204,7 +210,7 @@ class MetatraderSocket:
                     # Move SL to entry price and TP to TP2
                     self.modify_trade(ticket,symbol, new_sl=entry_price, new_tp=tp2)
                     # Close half the position
-                    self.close_half_position(ticket, symbol, type_, volume)
+                    self.close_position(ticket, symbol, type_, volume)
             logger.debug("Sleeping for 5 seconds")
             sleep(2)  # Avoid overloading the terminal
 
@@ -240,13 +246,16 @@ class MetatraderSocket:
             telegram_obj.sendMessage(f"Trade updated for [{symbol}]. Tread.")
 
     # Close half of the trade volume
-    def close_half_position(self,ticket, symbol, position_type, volume):
+    def close_position(self,ticket, symbol, position_type, volume,full_close=False):
         # MetaTrader 5 minimum lot size (typically 0.01, but can vary by broker)
         MIN_VOLUME = 0.01
+        if full_close:
+            MIN_VOLUME = volume;
+        
 
         # If the current volume is the minimum, close the entire position
         if volume <= MIN_VOLUME:
-            logger.info(f"Volume {volume} is too small to close half. Closing the entire position.")
+            logger.info(f"Full close Flag(partial/close order recived): {full_close}. Volume {volume} is too small to close half. Closing the entire position.")
             half_volume = volume  # Close the full position
         else:
             # Calculate half volume and ensure it's at least MIN_VOLUME
@@ -272,6 +281,52 @@ class MetatraderSocket:
             logger.info(f"Failed to close half of the trade {ticket}: {result.comment}")
         else:
             logger.info(f"Half of the currency [{symbol}] trade {ticket} closed: {volume}")
+    
+    def close_trade(self,trade_info):
+        ticket_id = self.tradedao.get_trade_by_trade_info(trade_info)
+        if ticket_id:
+            logger.info(f"The trade that matches the trade info description is having ticket id {ticket_id}")
+            orders = self.mt5.orders_get(ticket=ticket_id) 
+            if orders is None or len(orders) == 0:
+                orders = self.mt5.positions_get(ticket=ticket_id)
+            if orders is None or len(orders) == 0:
+                logger.error(f"Order with ticket ID {ticket_id} not found.")
+                return
+            for order in orders:
+                logger.info(f"Found the order on mt5 : {str(order)}")
+                if self.check_pending_order(order):
+                    self.close_pending_order(ticket_id)
+                else:
+                    self.close_position(ticket_id,trade_info['currency'],order.type,order.volume,True)
+        else:
+            logger.info(f"Trade not found in db for the trade info: {str(trade_info)}")
+            
+    def close_pending_order(self,order_id):
+        """
+        Cancel a pending order (e.g., BUY LIMIT, SELL LIMIT).
+        
+        :param order_id: The ticket ID of the pending order to cancel.
+        """
+        request = {
+            "action": self.mt5.TRADE_ACTION_REMOVE,  # Action to cancel the pending order
+            "order": order_id,  # The ticket ID of the pending order
+        }
+        result = self.mt5.order_send(request)
 
+        if result.retcode != self.mt5.TRADE_RETCODE_DONE:
+            logger.info(f"Failed to cancel pending order {order_id}: {result.comment}")
+            return False
+        else:
+            logger.info(f"Pending order {order_id} canceled successfully.")
+            return True
+        
+    def check_pending_order(self,order):
+        # Check if the order is a pending order based on the order type
+        if order.type in [self.mt5.ORDER_TYPE_BUY_LIMIT, self.mt5.ORDER_TYPE_SELL_LIMIT,
+                        self.mt5.ORDER_TYPE_BUY_STOP, self.mt5.ORDER_TYPE_SELL_STOP]:
+            logger.info(f"Order {order.ticket} is a pending order.")
+            return True
+        return False
+    
     def close_connection(self):
         self.mt5.shutdown()

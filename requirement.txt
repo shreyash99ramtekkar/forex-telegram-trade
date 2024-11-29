@@ -3,3 +3,5 @@ pyyaml
 telethon
 asyncio
 python-dotenv
+sqlalchemy 
+pymysql

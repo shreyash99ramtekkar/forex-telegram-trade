@@ -1,7 +1,7 @@
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger
 from notifications.Telegram import Telegram;
-from model.TelegramApp import TelegramApp;
-from model.MetatraderSocket import MetatraderSocket
+from service.TelegramApp import TelegramApp;
+from service.MetatraderSocket import MetatraderSocket
 from notifications.Telegram import Telegram;
 import threading;
 
