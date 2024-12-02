@@ -16,10 +16,10 @@ logger = fxstreetlogger.get_logger(__name__)
 class TradeRepository:
 
     def __init__(self):
-        engine = create_engine(DATABASE_URL)
+        engine = create_engine(DATABASE_URL,pool_pre_ping=True,pool_recycle=3600)
         Session = sessionmaker(bind=engine)
-        self.session = Session()
         # Create tables
+        self.Session = Session
         BASE.metadata.create_all(engine)
         logger.info("Tables created successfully");
 
@@ -37,8 +37,9 @@ class TradeRepository:
             telegram_message=telegram_message,
             timestamp=message_time
         )
-        self.session.add(trade)
-        self.session.commit()
+        with self.Session() as session:
+            session.add(trade)
+            session.commit()
         logger.info("Trade saved successfully!")
         
     def process_trade_info(self,message,request,result):
@@ -50,14 +51,14 @@ class TradeRepository:
             :param trade_info: dict
             :return: Trade object or None if not found
             """
-
-            trade = (
-                self.session.query(Trade)
-                .filter(Trade.timestamp == trade_info['time'])
-                .filter(Trade.symbol == trade_info['currency'])
-                .filter(Trade.stop_loss == trade_info['sl'])
-                .filter(Trade.take_profit1 == trade_info['tp1'])
-                .filter(Trade.take_profit2 == trade_info['tp2'])# Exact match
-                .first()  # Get the first trade that matches
-            )
+            with self.Session() as session:
+                trade = (
+                    session.query(Trade)
+                    .filter(Trade.timestamp == trade_info['time'])
+                    .filter(Trade.symbol == trade_info['currency'])
+                    .filter(Trade.stop_loss == trade_info['sl'])
+                    .filter(Trade.take_profit1 == trade_info['tp1'])
+                    .filter(Trade.take_profit2 == trade_info['tp2'])# Exact match
+                    .first()  # Get the first trade that matches
+                )
             return trade.ticket if trade else None

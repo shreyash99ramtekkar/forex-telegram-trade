@@ -280,7 +280,7 @@ class MetatraderSocket:
         if result.retcode != self.mt5.TRADE_RETCODE_DONE:
             logger.info(f"Failed to close half of the trade {ticket}: {result.comment}")
         else:
-            logger.info(f"Half of the currency [{symbol}] trade {ticket} closed: {volume}")
+            logger.info(f"Half of the currency [{symbol}] trade {ticket} closed: {half_volume}")
     
     def close_trade(self,trade_info):
         ticket_id = self.tradedao.get_trade_by_trade_info(trade_info)
