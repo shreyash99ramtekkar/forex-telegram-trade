@@ -17,7 +17,7 @@ logger = fxstreetlogger.get_logger(__name__)
 
 KEYWORDS = { 
     'trade' : ["sl","tp (1)","tp (2)","move sl after tp1"],
-    'close' : ["partial", "close"]
+    'close' : ["partial", "close","delete"]
     }
 
 class TelegramApp:
