@@ -215,11 +215,14 @@ class MetatraderSocket:
             sleep(2)  # Avoid overloading the terminal
 
     def get_tolarance(self,symbol):
+        usd_factor=1
+        if "USD" in symbol:
+            usd_factor = 4
         if symbol == "GOLD" or symbol =="XAUUSD":
-            return 0.50
+            return 0.10 * usd_factor
         elif "JPY" in symbol:
-            return 0.003
-        return 0.00005
+            return 0.005 * usd_factor
+        return 0.00005 * usd_factor
 
     def is_float(self,string):
         try:
