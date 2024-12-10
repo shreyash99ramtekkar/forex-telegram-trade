@@ -114,7 +114,8 @@ class TelegramApp:
         sl = re.search(sl_pattern, message).group(1).strip()
         tp1 = re.search(tp1_pattern, message).group(1).strip()
         tp2 = re.search(tp2_pattern, message).group(1).strip()
-
+        if currency == "XAUUSD":
+            currency = "GOLD"
         # Organize into a dictionary for easy access
         trade_info = {
             "currency": currency,
