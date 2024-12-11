@@ -246,7 +246,7 @@ class MetatraderSocket:
             logger.info(f"Failed to modify trade {ticket}: {result.comment}")
         else:
             logger.info(f"Trade {ticket} modified: SL={new_sl}, TP={new_tp}")
-            telegram_obj.sendMessage(f"Trade updated for [{symbol}]. Tread.")
+            telegram_obj.sendMessage(f"Trade {ticket} modified for symbol [{symbol}]: SL={new_sl}, TP={new_tp}")
 
     # Close half of the trade volume
     def close_position(self,ticket, symbol, position_type, volume,full_close=False):
