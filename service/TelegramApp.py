@@ -5,10 +5,12 @@ from constants.TelegramConstants import TELEGRAM_APP_ID
 from constants.TelegramConstants import TELEGRAM_SESSION;
 from constants.TelegramConstants import TELEGRAM_HASH_ID
 from constants.TelegramConstants import TELEGRAM_CHANNEL_IDS
-from constants.Constants import TIME_FORMAT;
+from constants.Constants import TIME_FORMAT
+from constants.Constants import TRADE_URL;
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 from notifications.Telegram import Telegram;
 import os;
+import requests
 
 telegram_obj = Telegram()
 fxstreetlogger = FxTelegramTradeLogger()
@@ -21,10 +23,9 @@ KEYWORDS = {
     }
 
 class TelegramApp:
-    def __init__(self,metatrader_obj):
+    def __init__(self):
         # Create the client and connect
         self.client = TelegramClient(TELEGRAM_SESSION, TELEGRAM_APP_ID, TELEGRAM_HASH_ID)
-        self.metatrader_obj = metatrader_obj
 
     async def connect_and_listen(self):
         # Connect to the Telegram client
@@ -43,8 +44,11 @@ class TelegramApp:
             if all(keyword in message_content for keyword in KEYWORDS['trade']):
                 logger.info(f"Trade : Filtered message in {chat_title} : {message_content}")
                 trade_info = self.extract_trade_info(event.message.message,event.date)
-                self.metatrader_obj.sendOrder(trade_info)
+                # self.metatrader_obj.sendOrder(trade_info)
+                response = requests.post(url=TRADE_URL,json=trade_info)
+                logger.info("The request for trade summited to the MT5 api")
                 logger.info("The trade info : " + str(trade_info))
+                logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
                 # You can also add further processing here (e.g., save, forward, etc.)
             elif any(keyword in message_content for keyword in KEYWORDS['close']):
                 logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
@@ -116,6 +120,10 @@ class TelegramApp:
         tp2 = re.search(tp2_pattern, message).group(1).strip()
         if currency == "XAUUSD":
             currency = "GOLD"
+        if trade_type == "BUY NOW":
+            trade_type = "BUY"
+        elif trade_type == "SELL NOW":
+            trade_type = "SELL"
         # Organize into a dictionary for easy access
         trade_info = {
             "currency": currency,

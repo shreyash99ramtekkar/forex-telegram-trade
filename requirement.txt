@@ -1,7 +1,5 @@
-mt5linux
 pyyaml
 telethon
 asyncio
 python-dotenv
-sqlalchemy 
-pymysql
+requests
