@@ -42,17 +42,17 @@ class FXStreet(Channel):
         chat_title = "Private Chat"
         if hasattr(event.chat, 'title'):
             chat_title = event.chat.title
-        if re.fullmatch(FXStreet.CREATE_TRADE_EXP,message_content) != None:
-            logger.info("Immediate trade without SL and TP")
-            logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
-            trade_info = self.extract_trade_info(event.message.message,event.date,True)
-            logger.info(f"Extracted trade info: {str(trade_info)}")
-            response = requests.post(url=TRADE_URL,json=trade_info)
-            FXStreet.open_order_list.append(trade_info)
-            logger.info("The request for trade summited to the MT5 api")
-            logger.info("The trade info : " + str(trade_info))
-            logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
-        elif all(keyword in message_content for keyword in FXStreet.CREATE_UPDATE_TRADE_KEYWORDS):
+        # if re.fullmatch(FXStreet.CREATE_TRADE_EXP,message_content) != None:
+        #     logger.info("Immediate trade without SL and TP")
+        #     logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
+        #     trade_info = self.extract_trade_info(event.message.message,event.date,True)
+        #     logger.info(f"Extracted trade info: {str(trade_info)}")
+        #     response = requests.post(url=TRADE_URL,json=trade_info)
+        #     FXStreet.open_order_list.append(trade_info)
+        #     logger.info("The request for trade summited to the MT5 api")
+        #     logger.info("The trade info : " + str(trade_info))
+        #     logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+        if all(keyword in message_content for keyword in FXStreet.CREATE_UPDATE_TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date)
             logger.info(f"Extracted trade info: {str(trade_info)}")
@@ -107,6 +107,8 @@ class FXStreet(Channel):
             trade_type = "SELL LIMIT"
         elif trade_type == "BUY ZONE":
             trade_type = "BUY LIMIT"
+            
+            
         if len(entry_price2)!=0 and entry_price2 is not None:
             if "BUY" in trade_type:
                 entry_price = str(min(float(entry_price),float(entry_price2)))
