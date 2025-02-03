@@ -13,4 +13,5 @@ TELEGRAM_APP_ID = os.getenv("APP_ID")
 TELEGRAM_HASH_ID = os.getenv("HASH_ID")
 TELEGRAM_PHONE = os.getenv("PHONE")
 
-TELEGRAM_CHANNEL_IDS = [ int(item) for item in os.getenv("TELEGRAM_IDS").split(',') ]
+TRADE_TITEN_TELE_IDS = [ int(item) for item in os.getenv("TRADE_TITEN_TELE_IDS","-1002049641249,-1002455402609").split(',') ]
+FX_STREET_TELE_IDS = [ int(item) for item in os.getenv("FX_STREET_TELE_IDS","-1002479981246").split(',') ]
