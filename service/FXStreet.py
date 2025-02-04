@@ -55,7 +55,7 @@ class FXStreet(Channel):
                 response = requests.put(url=TRADE_URL,json=trade_info)
             logger.info("The request for trade summited to the MT5 api")
             logger.info("The trade info : " + str(trade_info))
-            self.telegram_obj.sendMessages("The trade info : " + str(trade_info))
+            self.telegram_obj.sendMessage("The trade info : " + str(trade_info))
             logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
             # You can also add further processing here (e.g., save, forward, etc.)
         # elif any(keyword in message_content for keyword in FXStreet.CLOSE_KEYWORDS):
