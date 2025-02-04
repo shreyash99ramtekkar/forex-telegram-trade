@@ -3,7 +3,7 @@ import re
 from telethon import  events
 from constants.Constants import TIME_FORMAT
 from constants.Constants import TRADE_URL;
-from constants.TelegramConstants import FX_STREET_TELE_IDS
+
 from datetime import datetime as dt
 import requests
 
@@ -21,18 +21,8 @@ class FXStreet(Channel):
     
     open_order_list = []
     
-    async def connect_and_listen(self):
-        # Connect to the Telegram client
-        logger.info("Connecting to the telegram app");
-        await Channel.client.start()
-        logger.info("Connection successful");
-        # Listen for new messages with specific keywords
-        @Channel.client.on(events.NewMessage(chats=FX_STREET_TELE_IDS))
-        async def new_message_listener(event):
-            await self.process_messages(event)  
-        # Keep the client running to listen for messages
-        logger.info("Listening for filtered messages...")
-        await Channel.client.run_until_disconnected()
+    async def connect_and_listen(self,CHANNEL_ID):
+        await super().connect_and_listen(CHANNEL_ID)
     
     async def process_messages(self,event):
         print(f"open_order_list = {FXStreet.open_order_list}")
@@ -65,13 +55,14 @@ class FXStreet(Channel):
                 response = requests.put(url=TRADE_URL,json=trade_info)
             logger.info("The request for trade summited to the MT5 api")
             logger.info("The trade info : " + str(trade_info))
+            self.telegram_obj.sendMessages("The trade info : " + str(trade_info))
             logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
             # You can also add further processing here (e.g., save, forward, etc.)
         # elif any(keyword in message_content for keyword in FXStreet.CLOSE_KEYWORDS):
         #     logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
         #     await self.close_message_update(event)
         else:
-            FXStreet.telegram_obj.sendMessage("Message [" + message_content + "] didn't match any Keywords")
+            logger.info("Message [" + message_content + "] didn't match any Keywords")
                 
                 
     def extract_trade_info(self,message,event_time,direct_order=False):

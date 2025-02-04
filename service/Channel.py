@@ -1,8 +1,6 @@
 from abc import ABCMeta,abstractmethod
-from telethon import TelegramClient, events
-from constants.TelegramConstants import TELEGRAM_APP_ID
-from constants.TelegramConstants import TELEGRAM_SESSION;
-from constants.TelegramConstants import TELEGRAM_HASH_ID
+from telethon import events
+
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 from notifications.Telegram import Telegram;
 
@@ -13,12 +11,22 @@ logger = fxstreetlogger.get_logger(__name__)
 
 
 class Channel(metaclass=ABCMeta):  
-    client = TelegramClient(TELEGRAM_SESSION, TELEGRAM_APP_ID, TELEGRAM_HASH_ID) 
-    telegram_obj = Telegram() 
+    def __init__(self, client, telegram_obj):
+        self.client = client
+        self.telegram_obj = telegram_obj
         
     @abstractmethod
-    async def connect_and_listen(self):
-        pass
+    async def connect_and_listen(self,CHANNEL_ID):
+        # logger.info("Connecting to the telegram app");
+        # await Channel.client.start()
+        # logger.info("Connection successful");
+        # Listen for new messages with specific keywords
+        @self.client.on(events.NewMessage(chats=CHANNEL_ID))
+        async def new_message_listener(event):
+            await self.process_messages(event)  
+        logger.info("Code ended gracefully")
+        logger.info("Listening for filtered messages...")
+        await self.client.run_until_disconnected()
     
     @abstractmethod
     def extract_trade_info(self,message,event_time,direct_order=False):
