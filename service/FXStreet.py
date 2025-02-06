@@ -21,11 +21,47 @@ class FXStreet(Channel):
     
     open_order_list = []
     
+    message_store = {}
+    
     async def connect_and_listen(self,CHANNEL_ID):
-        await super().connect_and_listen(CHANNEL_ID)
+        # logger.info("Connecting to the telegram app");
+        # await Channel.client.start()
+        # logger.info("Connection successful");
+        # Listen for new messages with specific keywords
+        @self.client.on(events.NewMessage(chats=CHANNEL_ID))
+        async def new_message_listener(event):
+            message_id = event.message.id  # Get message ID
+            message_text = event.message.text  # Get message text
+            if "gold sell now"  in message_text.lower() or "gold buy now" in message_text.lower():
+                FXStreet.message_store[message_id] = message_text.lower()
+            logger.info(f"Message store={str(FXStreet.message_store)}")
+            await self.process_messages(event)  
+            
+        @self.client.on(events.MessageEdited(chats=CHANNEL_ID))
+        async def edited_message_listener(event):
+            await self.process_edited_message(event)
+            
+        logger.info("Code ended gracefully")
+        logger.info("Listening for filtered messages...")
+        await self.client.run_until_disconnected()
+        
+    
+    async def process_edited_message(self, event):
+        """Handles edited messages and checks if an important phrase was changed."""
+        message_id = event.message.id  # Get message ID
+        new_text = event.message.text  # New edited text
+        logger.info(f"Message store={str(FXStreet.message_store)}")
+        if message_id in FXStreet.message_store:  # Check if we have the original message
+            old_text = FXStreet.message_store[message_id]
+            # If the original text contained "Gold Buy Now" or "Gold Sell Now", trigger alert
+            if "gold buy now" in old_text or "gold sell now" in old_text:
+                FXStreet.message_store.pop(message_id)
+                logger.info(f"Detected change in Gold trading message:\nOld: {old_text}\nNew: {new_text}")
+                await self.process_messages(event)  # Call function if condition is met
+    
     
     async def process_messages(self,event):
-        print(f"open_order_list = {FXStreet.open_order_list}")
+        logger.info(f"open_order_list = {FXStreet.open_order_list}")
         message_content = event.message.message.lower()  # Convert to lowercase for case-insensitive matching
         logger.info("Message content : [ "+ message_content + " ]")
         # Check if the message contains any of the keywords
@@ -95,9 +131,9 @@ class FXStreet(Channel):
         elif trade_type == "SELL NOW":
             trade_type = "SELL"
         elif trade_type == "SELL ZONE":
-            trade_type = "SELL LIMIT"
+            trade_type = "SELL"
         elif trade_type == "BUY ZONE":
-            trade_type = "BUY LIMIT"
+            trade_type = "BUY"
             
             
         if len(entry_price2)!=0 and entry_price2 is not None:
