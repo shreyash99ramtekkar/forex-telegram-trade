@@ -79,7 +79,8 @@ class TradeTiten(Channel):
             "sl": sl,
             "tp1": tp1,
             "tp2": tp2,
-            "time": event_time.strftime(TIME_FORMAT)
+            "time": event_time.strftime(TIME_FORMAT),
+            "channel": "tradetiten"
         }
         
         return trade_info
