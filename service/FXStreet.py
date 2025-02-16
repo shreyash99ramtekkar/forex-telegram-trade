@@ -23,6 +23,8 @@ class FXStreet(Channel):
                     "GOLD BUY": [],
                     "GOLD SELL": []
                     }    
+    
+    edit_db = {}
     async def connect_and_listen(self,CHANNEL_ID):
         
         @self.client.on(events.NewMessage(chats=CHANNEL_ID))
@@ -31,13 +33,13 @@ class FXStreet(Channel):
             
         @self.client.on(events.MessageEdited(chats=CHANNEL_ID))
         async def edited_message_listener(event):
-            await self.process_messages(event)
+            await self.process_messages(event,True)
             
         await self.client.run_until_disconnected()
                 
     
     
-    async def process_messages(self,event):
+    async def process_messages(self,event,edit_flag=False):
         message_content = event.message.text
         message_id = event.message.id # Convert to lowercase for case-insensitive matching
         logger.info(f"message store = {FXStreet.message_store}")
@@ -69,13 +71,20 @@ class FXStreet(Channel):
             # self.metatrader_obj.sendOrder(trade_info)
             response = None
             update_event = self.process_edited_message(event,trade_info)
-            if not update_event:
-                response = requests.post(url=TRADE_URL,json=trade_info)
-            else:
+            if edit_flag and not update_event:
+                logger.info(f"PUT Request updating the trade. edit store = {FXStreet.message_store}")
+                trade_id = FXStreet.edit_db[message_id]
+                trade_info['trade_id'] = trade_id
+                response = requests.put(url=TRADE_URL,json=trade_info)
+            elif update_event:
                 logger.info(f"PUT Request updating the stack message store = {FXStreet.message_store}")
                 trade_id = FXStreet.message_store[self.generate_key(trade_info)].pop()
                 trade_info['trade_id'] = trade_id
+                FXStreet.edit_db[message_id]=trade_id
                 response = requests.put(url=TRADE_URL,json=trade_info)
+            elif not update_event:
+                response = requests.post(url=TRADE_URL,json=trade_info)
+            
             logger.info("The request for trade summited to the MT5 api")
             logger.info("The trade info : " + str(trade_info))
             self.telegram_obj.sendMessage("The trade info : " + str(trade_info))
