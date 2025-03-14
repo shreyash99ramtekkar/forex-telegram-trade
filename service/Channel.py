@@ -3,6 +3,8 @@ from telethon import events
 
 from logger.FxTelegramTradeLogger import FxTelegramTradeLogger;
 from notifications.Telegram import Telegram;
+from constants.Constants import SYMBOL_URL;
+import requests
 
 
 fxstreetlogger = FxTelegramTradeLogger()
@@ -60,6 +62,96 @@ class Channel(metaclass=ABCMeta):
         """
         pass
     
+    def set_price(self, trade_info,sl_pip=50,tp_pip=20,tp2_pip=40):
+        logger.info(f"Received the request for updating the price in the trade info{str(trade_info)}")
+        
+        symbol = trade_info['currency']
+        response = requests.get(url=SYMBOL_URL+"/"+symbol)
+        if response.status_code == 200:
+            symbol_info = response.json() 
+             
+            # Ensure required keys exist
+            if "point" not in symbol_info or "ask" not in symbol_info or "bid" not in symbol_info:
+                logger.error(f"Missing required fields in symbol_info: {symbol_info}")
+                return  # Exit function
+            logger.info(f"Received symbol info object {str(symbol_info)}")
+            point = symbol_info["point"] * 10   # Adjust pips calculation
+
+            # Extract trade parameters
+            price = trade_info.get("entry_price")
+            sl = trade_info.get("sl")
+            tp = trade_info.get("tp1")
+            tp2 = trade_info.get("tp2")
+            type_ = trade_info.get("trade_type", "").upper()  # Ensure type is uppercase
+
+            # If price, SL, TP, or TP2 is None, calculate defaults based on market price
+            if price is None:
+                price = symbol_info["ask"] if type_ == "BUY" else symbol_info["bid"]
+            if sl is None:
+                sl = price - (sl_pip * point) if type_ == "BUY" else price + (sl_pip * point)
+            if tp is None:
+                tp = price + (tp_pip* point) if type_ == "BUY" else price - (tp_pip * point)
+            if tp2 is None:
+                tp2 = price + (tp2_pip * point) if type_ == "BUY" else price - (tp2_pip * point)
+                
+             # ✅ Update trade_info with new values
+            trade_info.update({
+                "entry_price": price,
+                "sl": sl,
+                "tp1": tp,
+                "tp2": tp2
+            })
+            logger.info(f"updated trade info object {str(trade_info)}")
+        else:
+            logger.warn(f"Failed to fetch symbol info for {symbol}. Response: {response.status_code}, {response.text}")
+        return trade_info
+
+        
+    def delta_order(self,trade_info,pips=50):
+        logger.info(f"Received the request for delta trade. the trade info{str(trade_info)}")
+        symbol = trade_info['currency']
+        if symbol != "GOLD":
+            pips = pips/10
+        response = requests.get(url=SYMBOL_URL+"/"+symbol)
+        if response.status_code == 200:
+            symbol_info = response.json()     
+            # Ensure required keys exist
+            if "point" not in symbol_info or "ask" not in symbol_info or "bid" not in symbol_info:
+                logger.error(f"Missing required fields in symbol_info: {symbol_info}")
+                return  # Exit function
+            point = symbol_info["point"] * 10 * pips  # Adjust pips calculation
+
+             # Extract trade parameters
+            price = trade_info.get("entry_price")
+            sl = trade_info.get("sl")
+            tp = trade_info.get("tp1")
+            tp2 = trade_info.get("tp2")
+            type_ = trade_info.get("trade_type", "").upper()
+            
+            # Adjust price, SL, TP, TP2 based on trade type
+            if type_ == "BUY":
+                price -= point
+                sl -= point
+                tp -= point
+                tp2 -= point
+            elif type_ == "SELL":
+                price += point
+                sl += point
+                tp += point
+                tp2 += point
+
+            # ✅ Update trade_info with new values
+            trade_info.update({
+                "entry_price": price,
+                "sl": sl,
+                "tp1": tp,
+                "tp2": tp2
+            })
+            logger.info(f"Updated trade_info for delta order: {str(trade_info)}")
+        else:
+            logger.error(f"Failed to fetch symbol info for {symbol}. Response: {response.status_code}, {response.text}")
+        
+    
     async def get_channel_id(self):
         # Connect to the Telegram client
         await self.client.start()
@@ -68,4 +160,10 @@ class Channel(metaclass=ABCMeta):
             # Print the name and ID of each chat
             logger.info(f"Name: {dialog.name}, ID: {dialog.id}")
 
-    
+    def safe_float(self,value):
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except ValueError:
+            return None  # or return a default value

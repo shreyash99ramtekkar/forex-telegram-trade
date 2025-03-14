@@ -49,18 +49,23 @@ class FXStreet(Channel):
         if hasattr(event.chat, 'title'):
             chat_title = event.chat.title
         if re.fullmatch(FXStreet.CREATE_TRADE_EXP,message_content,re.IGNORECASE) != None:
+            order_id = None
             logger.info("Immediate trade without SL and TP")
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,True)
+            self.set_price(trade_info,sl_pip=30,tp_pip=20,tp2_pip = 40)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             response = requests.post(url=TRADE_URL,json=trade_info)
-            # Convert string to dictionary
-            response_dict = json.loads(response.text)
-            # Extract order_id
-            order_id = response_dict.get("order_id")
-            logger.info("The request for trade summited to the MT5 api")
-            logger.info("The trade info : " + str(trade_info))
-            logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+            if response.status_code == 200:
+                # Convert string to dictionary
+                response_dict = json.loads(response.text)
+                # Extract order_id
+                order_id = response_dict.get("order_id")
+                logger.info("The request for trade summited to the MT5 api")
+                logger.info("The trade info : " + str(trade_info))
+                logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+            else:
+                logger.warn(f"Recived the response with status code {response.status_code}")
             if order_id is not None:
                 FXStreet.message_store[self.generate_key(trade_info)].append(order_id)
             logger.info(f"Message store={str(FXStreet.message_store)}")
@@ -165,22 +170,22 @@ class FXStreet(Channel):
                 entry_price = str(min(float(entry_price),float(entry_price2)))
             elif "SELL" in trade_type:
                 entry_price = str(max(float(entry_price),float(entry_price2)))
-            
-            
         
         # Organize into a dictionary for easy access
         trade_info = {
             "currency": currency,
             "trade_type": trade_type,
-            "entry_price": entry_price,
-            "sl": sl,
-            "tp1": tp1,
-            "tp2": tp2,
+            "entry_price": self.safe_float(entry_price),
+            "sl": self.safe_float(sl),
+            "tp1": self.safe_float(tp1),
+            "tp2": self.safe_float(tp2),
             "time": event_time.strftime(TIME_FORMAT),
             "channel": "fxstreet"
         }
         
         return trade_info
+    
+        
     
     async def close_message_update(self,event):
         if event.is_reply:

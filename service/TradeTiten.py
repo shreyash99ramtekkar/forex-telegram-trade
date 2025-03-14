@@ -34,6 +34,7 @@ class TradeTiten(Channel):
         if all(keyword in message_content for keyword in TradeTiten.TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date)
+            self.delta_order(trade_info,50)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             # self.metatrader_obj.sendOrder(trade_info)
             response = requests.post(url=TRADE_URL,json=trade_info)
@@ -75,10 +76,10 @@ class TradeTiten(Channel):
         trade_info = {
             "currency": currency,
             "trade_type": trade_type,
-            "entry_price": entry_price,
-            "sl": sl,
-            "tp1": tp1,
-            "tp2": tp2,
+            "entry_price": self.safe_float(entry_price),
+            "sl": self.safe_float(sl),
+            "tp1": self.safe_float(tp1),
+            "tp2": self.safe_float(tp2),
             "time": event_time.strftime(TIME_FORMAT),
             "channel": "tradetiten"
         }
