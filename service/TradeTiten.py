@@ -5,7 +5,7 @@ fxstreetlogger = FxTelegramTradeLogger()
 from telethon import  events
 from constants.Constants import TIME_FORMAT
 from constants.Constants import TRADE_URL;
-
+import math as mt
 from datetime import datetime as dt
 import requests
 logger = fxstreetlogger.get_logger(__name__)
@@ -63,9 +63,11 @@ class TradeTiten(Channel):
         currency = re.search(currency_pattern, message).group(1).strip()
         trade_type = re.search(type_pattern, message).group(1).strip()
         entry_price = re.search(price_pattern, message).group(1).strip()
-        sl = re.search(sl_pattern, message).group(1).strip()
-        tp1 = re.search(tp1_pattern, message).group(1).strip()
-        tp2 = re.search(tp2_pattern, message).group(1).strip()
+        sl = self.safe_float(re.search(sl_pattern, message).group(1).strip())
+        tp1 = self.safe_float(re.search(tp1_pattern, message).group(1).strip())
+        # setting the tp3 from tp2 since its difference is so high in trade titen
+        tp3 = self.safe_float(re.search(tp2_pattern, message).group(1).strip())
+        tp2 = self.safe_float((tp1+tp3)/2)
         if currency == "XAUUSD":
             currency = "GOLD"
         if trade_type == "BUY NOW":
@@ -77,9 +79,10 @@ class TradeTiten(Channel):
             "currency": currency,
             "trade_type": trade_type,
             "entry_price": self.safe_float(entry_price),
-            "sl": self.safe_float(sl),
-            "tp1": self.safe_float(tp1),
-            "tp2": self.safe_float(tp2),
+            "sl": sl,
+            "tp1": tp1,
+            "tp2": tp2,
+            "tp3": tp3,
             "time": event_time.strftime(TIME_FORMAT),
             "channel": "tradetiten"
         }

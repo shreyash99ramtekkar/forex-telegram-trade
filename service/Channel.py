@@ -62,7 +62,7 @@ class Channel(metaclass=ABCMeta):
         """
         pass
     
-    def set_price(self, trade_info,sl_pip=50,tp_pip=20,tp2_pip=40):
+    def set_price(self, trade_info,sl_pip=50,tp_pip=20,tp2_pip=40,tp3_pip=60):
         logger.info(f"Received the request for updating the price in the trade info{str(trade_info)}")
         
         symbol = trade_info['currency']
@@ -82,6 +82,7 @@ class Channel(metaclass=ABCMeta):
             sl = trade_info.get("sl")
             tp = trade_info.get("tp1")
             tp2 = trade_info.get("tp2")
+            tp3 = trade_info.get("tp3")
             type_ = trade_info.get("trade_type", "").upper()  # Ensure type is uppercase
 
             # If price, SL, TP, or TP2 is None, calculate defaults based on market price
@@ -93,13 +94,16 @@ class Channel(metaclass=ABCMeta):
                 tp = price + (tp_pip* point) if type_ == "BUY" else price - (tp_pip * point)
             if tp2 is None:
                 tp2 = price + (tp2_pip * point) if type_ == "BUY" else price - (tp2_pip * point)
+            if tp3 is None:
+                tp3 = price + (tp3_pip * point) if type_ == "BUY" else price - (tp3_pip * point)
                 
              # ✅ Update trade_info with new values
             trade_info.update({
                 "entry_price": price,
                 "sl": sl,
                 "tp1": tp,
-                "tp2": tp2
+                "tp2": tp2,
+                "tp3": tp3
             })
             logger.info(f"updated trade info object {str(trade_info)}")
         else:
@@ -126,6 +130,7 @@ class Channel(metaclass=ABCMeta):
             sl = trade_info.get("sl")
             tp = trade_info.get("tp1")
             tp2 = trade_info.get("tp2")
+            tp3 = trade_info.get("tp3")
             type_ = trade_info.get("trade_type", "").upper()
             
             # Adjust price, SL, TP, TP2 based on trade type
@@ -134,18 +139,21 @@ class Channel(metaclass=ABCMeta):
                 sl -= point
                 tp -= point
                 tp2 -= point
+                tp3 -= point
             elif type_ == "SELL":
                 price += point
                 sl += point
                 tp += point
                 tp2 += point
+                tp3 += point
 
             # ✅ Update trade_info with new values
             trade_info.update({
                 "entry_price": price,
                 "sl": sl,
                 "tp1": tp,
-                "tp2": tp2
+                "tp2": tp2,
+                "tp3": tp3
             })
             logger.info(f"Updated trade_info for delta order: {str(trade_info)}")
         else:
