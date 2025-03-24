@@ -17,6 +17,7 @@ class TradeTiten(Channel):
     
     CLOSE_KEYWORDS = ["partial", "close","delete","cut","closing"]
     
+    edit_db = {}
     
     async def connect_and_listen(self,CHANNEL_ID):
          await super().connect_and_listen(CHANNEL_ID)
@@ -26,6 +27,7 @@ class TradeTiten(Channel):
     
     async def process_messages(self,event):
         message_content = event.message.message.lower()  # Convert to lowercase for case-insensitive matching
+        message_id = event.message.id
         logger.info("Message content : [ "+ message_content + " ]")
         # Check if the message contains any of the keywords
         chat_title = "Private Chat"
@@ -38,10 +40,19 @@ class TradeTiten(Channel):
             logger.info(f"Extracted trade info: {str(trade_info)}")
             # self.metatrader_obj.sendOrder(trade_info)
             response = requests.post(url=TRADE_URL,json=trade_info)
-            logger.info("The request for trade summited to the MT5 api")
-            logger.info("The trade info : " + str(trade_info))
-            self.telegram_obj.sendMessage("The trade info : " + str(trade_info))
-            logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+            if response.status_code == 200:
+                # Convert string to dictionary
+                response_dict = json.loads(response.text)
+                # Extract order_id
+                order_id = response_dict.get("order_id")
+                logger.info("The request for trade summited to the MT5 api")
+                logger.info("The trade info : " + str(trade_info))
+                logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+                if order_id:
+                    TradeTiten.edit_db[message_id] = order_id
+                    logger.info(f"Trade info saved in the edit_db: {str(TradeTiten.edit_db)}")
+            else:
+                logger.warn(f"Recived the response with status code {response.status_code}")
             # You can also add further processing here (e.g., save, forward, etc.)
         elif any(keyword in message_content for keyword in TradeTiten.CLOSE_KEYWORDS):
             logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
@@ -95,14 +106,15 @@ class TradeTiten(Channel):
             logger.info("Reply message found. Getting original message")
             original_message = await event.get_reply_message()
             if original_message:
-                logger.info("Extracting trade info from the message")
-                trade_info = self.extract_trade_info(original_message.text,original_message.date)
-                logger.info(f"Extracted trade info: {str(trade_info)}")
-                # self.metatrader_obj.sendOrder(trade_info)
-                response = requests.delete(url=TRADE_URL,json=trade_info)
-                logger.info("The request for trade summited to the MT5 api")
-                logger.info("The trade info : " + str(trade_info))
-                logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+                original_message_id = original_message.id
+                if original_message_id in TradeTiten.edit_db:
+                    order_id = TradeTiten.edit_db[original_message_id]
+                    logger.info(f"Order ID found in edit_db: {order_id}")
+                    resopnse = requests.delete(url=TRADE_URL + "/" + str(order_id))
+                    logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
+                    logger.info("The request for trade summited to the MT5 api")
+                else:
+                    logger.info("Original message ID not found in edit_db")
         else:
             logger.info('Normal message')
         # Information about the current message

@@ -17,7 +17,7 @@ class FXStreet(Channel):
     
     CREATE_UPDATE_TRADE_KEYWORDS = ["STOP LOSS","TP1","TP2"]
     
-    CLOSE_KEYWORDS = ["partial", "close","delete","cut","closing"]
+    CLOSE_KEYWORDS = ["set breakeven"]
     
     message_store = {
                     "GOLD BUY": [],
@@ -25,6 +25,7 @@ class FXStreet(Channel):
                     }    
     
     edit_db = {}
+    order_list = []
     async def connect_and_listen(self,CHANNEL_ID):
         
         @self.client.on(events.NewMessage(chats=CHANNEL_ID))
@@ -68,6 +69,8 @@ class FXStreet(Channel):
                 logger.warn(f"Recived the response with status code {response.status_code}")
             if order_id is not None:
                 FXStreet.message_store[self.generate_key(trade_info)].append(order_id)
+                FXStreet.order_list.append(order_id)
+                
             logger.info(f"Message store={str(FXStreet.message_store)}")
         elif all(keyword in message_content.upper() for keyword in FXStreet.CREATE_UPDATE_TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
@@ -89,15 +92,19 @@ class FXStreet(Channel):
                 response = requests.put(url=TRADE_URL,json=trade_info)
             elif not update_event:
                 response = requests.post(url=TRADE_URL,json=trade_info)
-            
             logger.info("The request for trade summited to the MT5 api")
             logger.info("The trade info : " + str(trade_info))
             self.telegram_obj.sendMessage("The trade info : " + str(trade_info))
             logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
             # You can also add further processing here (e.g., save, forward, etc.)
-        # elif any(keyword in message_content for keyword in FXStreet.CLOSE_KEYWORDS):
-        #     logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
-        #     await self.close_message_update(event)
+        elif any(keyword.lower() in message_content.lower() for keyword in FXStreet.CLOSE_KEYWORDS):
+            logger.info(f"Close trade: Filtered message in {chat_title} : {message_content}")
+            order_id = FXStreet.order_list[-1]
+            if order_id is None:
+                logger.info("No order to close")
+                return
+            response = requests.delete(url=TRADE_URL + "/" + str(order_id))
+            logger.info(f"Recived the response {response.text} with status code {response.status_code}" )
         else:
             logger.info("Message [" + message_content + "] didn't match any Keywords")
                 
@@ -198,7 +205,7 @@ class FXStreet(Channel):
         if "BUY" in trade_type:
             tp3 = tp2 + (tp2-tp1)
         elif "SELL" in trade_type:
-            tp3 = tp2 - (tp2-tp1)
+            tp3 = tp2 - (tp1-tp2)
         return tp3
     
     async def close_message_update(self,event):
