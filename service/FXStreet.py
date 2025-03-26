@@ -41,6 +41,7 @@ class FXStreet(Channel):
     
     
     async def process_messages(self,event,edit_flag=False):
+        DELTA_PIPS = 7
         message_content = event.message.text
         message_id = event.message.id # Convert to lowercase for case-insensitive matching
         logger.info(f"message store = {FXStreet.message_store}")
@@ -54,7 +55,8 @@ class FXStreet(Channel):
             logger.info("Immediate trade without SL and TP")
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,True)
-            self.set_price(trade_info,sl_pip=30,tp_pip=20,tp2_pip = 40)
+            self.set_price(trade_info,sl_pip=30,tp_pip=20,tp2_pip = 40,tp3_pip=60)
+            self.delta_order(trade_info,DELTA_PIPS)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             response = requests.post(url=TRADE_URL,json=trade_info)
             if response.status_code == 200:
@@ -75,6 +77,8 @@ class FXStreet(Channel):
         elif all(keyword in message_content.upper() for keyword in FXStreet.CREATE_UPDATE_TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,False)
+            self.set_price(trade_info)
+            self.delta_order(trade_info,DELTA_PIPS)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             # self.metatrader_obj.sendOrder(trade_info)
             response = None
@@ -150,7 +154,7 @@ class FXStreet(Channel):
         sl = None
         tp1 = None
         tp2 = None
-        tp3 = None
+        # tp3 = None
         entry_price2 = None
         # Extract using regular expressions
         currency = re.search(currency_pattern, message,re.IGNORECASE).group(1).strip().upper()
@@ -162,7 +166,7 @@ class FXStreet(Channel):
             sl = self.safe_float(re.search(sl_pattern, message,re.IGNORECASE).group(1).strip())
             tp1 = self.safe_float(re.search(tp1_pattern, message,re.IGNORECASE).group(1).strip())
             tp2 = self.safe_float(re.search(tp2_pattern, message,re.IGNORECASE).group(1).strip())
-            tp3 = self.set_tp3(tp1,tp2,trade_type)
+            # tp3 = self.set_tp3(tp1,tp2,trade_type)
             
         if currency == "XAUUSD":
             currency = "GOLD"
@@ -178,10 +182,12 @@ class FXStreet(Channel):
             
             
         if entry_price2 is not None and len(entry_price2)!=0 :
-            if "BUY" in trade_type:
-                entry_price = str(min(float(entry_price),float(entry_price2)))
-            elif "SELL" in trade_type:
-                entry_price = str(max(float(entry_price),float(entry_price2)))
+            # when there are two prices and the order is post it should get the current price by calling set_price function
+            entry_price = None
+            # if "BUY" in trade_type:
+            #     entry_price = str(min(float(entry_price),float(entry_price2)))
+            # elif "SELL" in trade_type:
+            #     entry_price = str(max(float(entry_price),float(entry_price2)))
         
         # Organize into a dictionary for easy access
         trade_info = {
@@ -191,7 +197,8 @@ class FXStreet(Channel):
             "sl": sl,
             "tp1": tp1,
             "tp2": tp2,
-            "tp3": tp3,
+            # "tp3": tp3,
+            "tp3": None,
             "time": event_time.strftime(TIME_FORMAT),
             "channel": "fxstreet"
         }
