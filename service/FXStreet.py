@@ -166,7 +166,7 @@ class FXStreet(Channel):
             sl = self.safe_float(re.search(sl_pattern, message,re.IGNORECASE).group(1).strip())
             tp1 = self.safe_float(re.search(tp1_pattern, message,re.IGNORECASE).group(1).strip())
             tp2 = self.safe_float(re.search(tp2_pattern, message,re.IGNORECASE).group(1).strip())
-            # tp3 = self.set_tp3(tp1,tp2,trade_type)
+            tp3 = self.set_tp3(tp1,tp2,trade_type)
             
         if currency == "XAUUSD":
             currency = "GOLD"
