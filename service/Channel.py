@@ -62,22 +62,13 @@ class Channel(metaclass=ABCMeta):
         """
         pass
     
-    def set_price(self, trade_info,sl_pip=50,tp_pip=20,tp2_pip=40,tp3_pip=60):
+    def set_price(self, trade_info,sl_pip=50,tp_pip=20,tp2_pip=40,tp3_pip=100):
+        THRESHOLD = 100
         logger.info(f"Received the request for updating the price in the trade info{str(trade_info)}")
-        
         symbol = trade_info['currency']
-        response = requests.get(url=SYMBOL_URL+"/"+symbol)
-        if response.status_code == 200:
-            symbol_info = response.json() 
-             
-            # Ensure required keys exist
-            if "point" not in symbol_info or "ask" not in symbol_info or "bid" not in symbol_info:
-                logger.error(f"Missing required fields in symbol_info: {symbol_info}")
-                return  # Exit function
-            logger.info(f"Received symbol info object {str(symbol_info)}")
+        symbol_info = self.get_symbol_info(symbol)
+        if symbol_info is not None:
             point = symbol_info["point"] * 10   # Adjust pips calculation
-
-            # Extract trade parameters
             price = trade_info.get("entry_price")
             sl = trade_info.get("sl")
             tp = trade_info.get("tp1")
@@ -86,17 +77,58 @@ class Channel(metaclass=ABCMeta):
             type_ = trade_info.get("trade_type", "").upper()  # Ensure type is uppercase
 
             # If price, SL, TP, or TP2 is None, calculate defaults based on market price
-            if price is None:
-                price = symbol_info["ask"] if type_ == "BUY" else symbol_info["bid"]
-            if sl is None:
-                sl = price - (sl_pip * point) if type_ == "BUY" else price + (sl_pip * point)
-            if tp is None:
-                tp = price + (tp_pip* point) if type_ == "BUY" else price - (tp_pip * point)
-            if tp2 is None:
-                tp2 = price + (tp2_pip * point) if type_ == "BUY" else price - (tp2_pip * point)
-            if tp3 is None:
-                tp3 = price + (tp3_pip * point) if type_ == "BUY" else price - (tp3_pip * point)
                 
+            if type_ == "BUY":
+                logger.info(f"Trade type is BUY")
+                if price is None:
+                    price = symbol_info["ask"]
+                    logger.warn(f"Price is None. New price: {price}")
+                    
+                if tp is None or tp <= price or tp >= tp2 or abs(price - tp) > THRESHOLD:
+                    logger.warn(f"Take profit 1 is None." if tp is None else f"tp {tp} <= price {price} OR tp {tp} >= tp2 {tp2} OR abs(price {price} - tp {tp}) > {THRESHOLD}")
+                    tp = price + (tp_pip* point)
+                    logger.info(f"New tp: {tp}")
+                # Ensure TP3 is set first because it will be always set to OPEN(None) and for next comparison(tp2>=tp3) we need tp3 set
+                if tp3 is None or tp3 <= tp2 or abs(tp3 - price) > THRESHOLD:
+                    logger.warn(f"Tp3 {tp3} <= tp2 {tp2} or abs(tp3 {tp3} - price {price}) > {THRESHOLD}." if tp3 is not None else f"Take profit 3 is None.")
+                    tp3 =  price + (tp3_pip * point)
+                    logger.info(f"New tp3: {tp3}")
+                             
+                if tp2 is None or (tp2 <= tp) or (tp2 >= tp3) or abs(tp2 - price) > THRESHOLD:
+                    logger.warn(f"(tp2 {tp2} <= tp {tp}) or (tp2 {tp2} >= tp3 {tp3}) or abs(tp2 {tp2} - price {price}) > {THRESHOLD}" if tp2 is not None else f"Take profit 2 is None.")
+                    tp2 = price + (tp2_pip * point)
+                    logger.info(f"New tp2: {tp2}")
+                    
+                if sl is None or sl >= price or abs(price - sl) >  THRESHOLD:
+                    logger.warn(f"Sl {sl} >= price {price} OR abs(price {price} - sl {sl}): { abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
+                    sl = price - (sl_pip * point) 
+                    logger.info(f"New sl: {sl}")
+            else:
+                logger.info(f"Trade type is SELL")
+                if price is None:
+                    price = symbol_info["bid"]
+                    logger.info(f"Price is None. Using bid price: {price}")
+                    
+                if tp is None or tp >= price or tp <= tp2 or abs(price - tp) > THRESHOLD:
+                    logger.warn(f"Take profit 1 is None." if tp is None else f"tp {tp} >= price {price} OR tp {tp} <= tp2 {tp2} OR abs(price {price} - tp {tp}) > {THRESHOLD}")
+                    tp = price - (tp_pip * point)
+                    logger.info(f"New tp: {tp}")
+                    
+                # Ensure TP3 is set first because it will be always set to OPEN(None) and for next comparison(tp2>=tp3) we need tp3 set
+                if tp3 is None or tp3 >= tp2 or abs(tp3 - price) > THRESHOLD:
+                    logger.warn(f"Tp3 {tp3} >= tp2 {tp2} or abs(tp3 {tp3} - price {price}) > {THRESHOLD}." if tp3 is not None else f"Take profit 3 is None.")
+                    tp3 = price - (tp3_pip * point)
+                    logger.info(f"New tp3: {tp3}")
+                   
+                if tp2 is None or (tp2 >= tp) or (tp2 <= tp3) or abs(tp2 - price) > THRESHOLD:
+                    logger.warn(f"(tp2 {tp2} >= tp {tp}) or (tp2 {tp2} <= tp3 {tp3}) or abs(tp2 {tp2} - price {price}) > {THRESHOLD}" if tp2 is not None else f"Take profit 2 is None.")
+                    tp2 = price - (tp2_pip * point)
+                    logger.info(f"New tp2: {tp2}")
+                    
+                if sl is None or sl <= price or abs(sl - price) > 20:
+                    logger.warn(f"Sl {sl} <= price {price} OR abs(price {price} - sl {sl}): {abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
+                    sl = price + (sl_pip * point)
+                    logger.info(f"New sl: {sl}")
              # ✅ Update trade_info with new values
             trade_info.update({
                 "entry_price": price,
@@ -107,15 +139,34 @@ class Channel(metaclass=ABCMeta):
             })
             logger.info(f"updated trade info object {str(trade_info)}")
         else:
-            logger.warn(f"Failed to fetch symbol info for {symbol}. Response: {response.status_code}, {response.text}")
+            logger.error(f"Failed to fetch symbol info for {symbol}.")
+       
         return trade_info
+    
+    def get_symbol_info(self,symbol):
+        symbol_info = None
+        response = requests.get(url=SYMBOL_URL+"/"+symbol)
+        if response.status_code == 200:
+            symbol_info = response.json() 
+            # Ensure required keys exist
+            if "point" not in symbol_info or "ask" not in symbol_info or "bid" not in symbol_info:
+                logger.error(f"Missing required fields in symbol_info: {symbol_info}")
+                return  # Exit function
+            logger.info(f"Received symbol info object {str(symbol_info)}")
+        else:
+            logger.warn(f"Failed to fetch symbol info for {symbol}. Response: {response.status_code}, {response.text}")
+        return symbol_info
+            
 
+       
+        
         
     def delta_order(self,trade_info,pips=50):
-        logger.info(f"Received the request for delta trade. the trade info{str(trade_info)}")
+        
         symbol = trade_info['currency']
         if symbol != "GOLD":
-            pips = pips/10
+            pips = 20
+        logger.info(f"Received the request for delta trade with difference of {pips} pips for symbol {symbol}")
         response = requests.get(url=SYMBOL_URL+"/"+symbol)
         if response.status_code == 200:
             symbol_info = response.json()     

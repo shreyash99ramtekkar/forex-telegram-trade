@@ -8,6 +8,7 @@ from constants.Constants import TRADE_URL;
 import math as mt
 from datetime import datetime as dt
 import requests
+import json
 logger = fxstreetlogger.get_logger(__name__)
 
 class TradeTiten(Channel):

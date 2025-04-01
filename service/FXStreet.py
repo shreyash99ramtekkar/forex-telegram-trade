@@ -77,6 +77,7 @@ class FXStreet(Channel):
         elif all(keyword in message_content.upper() for keyword in FXStreet.CREATE_UPDATE_TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,False)
+            # entry price is set to none to get the latest price
             self.set_price(trade_info)
             self.delta_order(trade_info,DELTA_PIPS)
             logger.info(f"Extracted trade info: {str(trade_info)}")
@@ -171,15 +172,11 @@ class FXStreet(Channel):
         if currency == "XAUUSD":
             currency = "GOLD"
             
-        if trade_type == "BUY NOW":
+        if trade_type in ["BUY NOW", "BUY ZONE"]:
             trade_type = "BUY"
-        elif trade_type == "SELL NOW":
+        elif trade_type in ["SELL NOW","SELL ZONE"]:
             trade_type = "SELL"
-        elif trade_type == "SELL ZONE":
-            trade_type = "SELL"
-        elif trade_type == "BUY ZONE":
-            trade_type = "BUY"
-            
+    
             
         if entry_price2 is not None and len(entry_price2)!=0 :
             # when there are two prices and the order is post it should get the current price by calling set_price function
