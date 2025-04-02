@@ -55,7 +55,7 @@ class FXStreet(Channel):
             logger.info("Immediate trade without SL and TP")
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,True)
-            self.set_price(trade_info,sl_pip=30,tp_pip=20,tp2_pip = 40,tp3_pip=60)
+            self.set_price(trade_info,sl_pip=50,tp_pip=20,tp2_pip = 40,tp3_pip=100)
             self.delta_order(trade_info,DELTA_PIPS)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             response = requests.post(url=TRADE_URL,json=trade_info)
@@ -78,7 +78,7 @@ class FXStreet(Channel):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date,False)
             # entry price is set to none to get the latest price
-            self.set_price(trade_info)
+            self.set_price(trade_info,sl_pips=50,tp3_pips=100)
             self.delta_order(trade_info,DELTA_PIPS)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             # self.metatrader_obj.sendOrder(trade_info)

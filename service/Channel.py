@@ -99,10 +99,10 @@ class Channel(metaclass=ABCMeta):
                     tp2 = price + (tp2_pip * point)
                     logger.info(f"New tp2: {tp2}")
                     
-                if sl is None or sl >= price or abs(price - sl) >  THRESHOLD:
-                    logger.warn(f"Sl {sl} >= price {price} OR abs(price {price} - sl {sl}): { abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
-                    sl = price - (sl_pip * point) 
-                    logger.info(f"New sl: {sl}")
+                # if sl is None or sl >= price or abs(price - sl) >  THRESHOLD:
+                #     logger.warn(f"Sl {sl} >= price {price} OR abs(price {price} - sl {sl}): { abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
+                sl = price - (sl_pip * point) 
+                logger.info(f"New sl: {sl}")
             else:
                 logger.info(f"Trade type is SELL")
                 if price is None:
@@ -125,10 +125,10 @@ class Channel(metaclass=ABCMeta):
                     tp2 = price - (tp2_pip * point)
                     logger.info(f"New tp2: {tp2}")
                     
-                if sl is None or sl <= price or abs(sl - price) > 20:
-                    logger.warn(f"Sl {sl} <= price {price} OR abs(price {price} - sl {sl}): {abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
-                    sl = price + (sl_pip * point)
-                    logger.info(f"New sl: {sl}")
+                # if sl is None or sl <= price or abs(sl - price) > 20:
+                #     logger.warn(f"Sl {sl} <= price {price} OR abs(price {price} - sl {sl}): {abs(price - sl) } > 20" if sl is not None else f"Stop loss is None.")
+                sl = price + (sl_pip * point)
+                logger.info(f"New sl: {sl}")
              # ✅ Update trade_info with new values
             trade_info.update({
                 "entry_price": price,
