@@ -37,7 +37,7 @@ class TradeTiten(Channel):
         if all(keyword in message_content for keyword in TradeTiten.TRADE_KEYWORDS):
             logger.info(f"Trade : Message passed the filters check of the channel: {chat_title}")
             trade_info = self.extract_trade_info(event.message.message,event.date)
-            self.set_price(trade_info,sl_pips=30)
+            self.set_price(trade_info,sl_pip=30)
             self.delta_order(trade_info,50)
             logger.info(f"Extracted trade info: {str(trade_info)}")
             # self.metatrader_obj.sendOrder(trade_info)
